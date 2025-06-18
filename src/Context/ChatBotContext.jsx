@@ -14,7 +14,7 @@ import {
   orderBy,
 } from "firebase/firestore";
 import { useAuth } from "./AuthContext";
-import { GeminiApiCall } from "../utilities/Gemini";
+import { groq } from "../utilities/Groq";
 import { VoiceChat } from "@mui/icons-material";
 
 const ChatBotContext = createContext({
@@ -241,11 +241,25 @@ export const ChatBotContextProvider = ({ children }) => {
     try {
       const ChatHistory = findChats();
       if (ChatHistory.length < 1) {
-        responseText = await GeminiApiCall(UserInput);
+        const response = await groq.post("/chat/completions", {
+          model: "mixtral-8x7b-32768",
+          messages: [{ role: "user", content: UserInput }],
+          temperature: 0.7,
+          max_tokens: 1024,
+        });
+        responseText = response.data.choices[0].message.content;
       } else if (ChatHistory.length >= 1) {
-        responseText = await GeminiApiCall(UserInput, [
-          { role: "user", parts: ChatHistory },
-        ]);
+        const messages = [
+          ...ChatHistory.map(msg => ({ role: "user", content: msg.text })),
+          { role: "user", content: UserInput }
+        ];
+        const response = await groq.post("/chat/completions", {
+          model: "mixtral-8x7b-32768",
+          messages,
+          temperature: 0.7,
+          max_tokens: 1024,
+        });
+        responseText = response.data.choices[0].message.content;
       }
       await saveUserChat({
         Prompt: UserInput,
@@ -253,8 +267,8 @@ export const ChatBotContextProvider = ({ children }) => {
       });
       typeResponse(responseText);
     } catch (error) {
-      setError(error.code || error.message);
-      typeResponse("No response from API Please Try later");
+      setError(error.message);
+      typeResponse();
     } finally {
       setFetchingData(false);
     }
@@ -287,17 +301,22 @@ export const ChatBotContextProvider = ({ children }) => {
         return;
       }
       try {
-        const result = await GeminiApiCall(spokenText);
+        const result = await groq.chat.completions.create({
+          messages: [{ role: "user", content: spokenText }],
+          model: "mixtral-8x7b-32768",
+          temperature: 0.7,
+          max_tokens: 1024,
+        });
         let customResult =
-          result.split("**").length > 1
-            ? result.split("**")
-            : result.split("*");
+          result.choices[0].message.content.split("**").length > 1
+            ? result.choices[0].message.content.split("**")
+            : result.choices[0].message.content.split("*");
         speakText(customResult.join(""));
         setDisable(false);
       } catch (error) {
-        setError(error.code || error.message);
+        setError(error.message);
         speakText(
-          "An error Occured Please Try Later" + error.code || error.message
+          "An error Occured Please Try Later" + error.message
         );
       }
     };

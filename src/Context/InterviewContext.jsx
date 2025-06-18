@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { GeminiApiCall } from "../utilities/Gemini";
+import { generateInterviewQuestion, analyzeAnswer } from "../utilities/Groq";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
@@ -210,51 +210,26 @@ const InterviewContextProvider = ({ children }) => {
   }, [response]);
 
   const onSubmit = async (formData) => {
-    const { selectedIndustry, Description, Experience, JobTitle } = formData;
-    if (
-      selectedIndustry === "" ||
-      Description === "" ||
-      Experience === "" ||
-      JobTitle === "" ||
-      value.length <= 0
-    ) {
-      setError("Please Fill all Fields");
-      return;
-    }
-    if (Description.length > 300) {
-      setError("Your Description exceeds 300 characters. Please shorten it");
-      return;
-    }
-
-    setBtnDisable(true);
-    const prompt = `Generate a JSON array of realistic, professional interview questions based on the following job details. Focus on questions that assess the candidate’s skills, experience, and fit for the role in a real-world interview setting. Make questions natural and relevant. Job Details:Industry: ${selectedIndustry},  Job Title: ${JobTitle} , Job Description: ${Description} , Required Skills: ${value.join(
-      " , "
-    )} , Experience Level: ${Experience} Output only the questions as a JSON array, with no additional text or symbols.`;
-    setGenerateQuestions(true);
-    const userDetails = `I am a ${JobTitle} my sills is ${value.join(
-      ","
-    )} and my experience is ${Experience}.`;
-
     try {
-      const result = await GeminiApiCall(prompt);
-      const cleanResponse = result
-        .replace(/```json/, "")
-        .replace(/```/, "")
-        .trim();
-      const parse = JSON.parse(cleanResponse);
+      setGenerateQuestions(true);
+      const jobDescription = `Job Title: ${formData.jobTitle}\nExperience: ${formData.experience}\nSkills: ${formData.skills.join(", ")}`;
+      
+      // Generate questions using Groq
+      const questions = [];
+      for (let i = 0; i < 5; i++) {
+        const question = await generateInterviewQuestion(jobDescription, questions);
+        questions.push(question);
+      }
+      
+      setQuestions(questions);
+      setJobTitle(formData.jobTitle);
+      setUserDetail(formData);
       setGenerateQuestions(false);
-      setBtnDisable(false);
-      navigate("/interview", {
-        replace: true,
-        state: {
-          questions: parse,
-          jobTitle: JobTitle,
-          userDetails: userDetails,
-        },
+      navigate("/interview-questions", {
+        state: { questions, jobTitle: formData.jobTitle, userDetails: formData },
       });
     } catch (error) {
-      setError(error.code || error.message);
-      setBtnDisable(false);
+      setError(error.message);
       setGenerateQuestions(false);
     }
   };
@@ -272,61 +247,38 @@ const InterviewContextProvider = ({ children }) => {
   };
 
   const handleNextQuestion = async () => {
-    if (index < questions.length - 1) {
+    try {
       if (currentAnswer.trim() === "") {
-        setError("Please write answer in text Area:");
+        setError("Please provide an answer before proceeding.");
         return;
       }
-      if (currentAnswer.trim().length > 600) {
-        setError("Your Answer exceeds 600 characters. Please shorten it");
-        return;
-      }
-      setAnswers((prev) => [...prev, currentAnswer]);
-      setIndex(index + 1);
-      setCurrentAnswer("");
-    } else if (index === questions.length - 1) {
-      if (currentAnswer.trim() === "") {
-        setError("Please write answer in text Area:");
-        return;
-      }
-      if (currentAnswer.trim().length > 600) {
-        setError("Your Answer exceeds 600 characters. Please shorten it");
-        return;
-      }
-      setAnswers((prev) => [...prev, currentAnswer]);
+
       setBtnDisable(true);
-      setGenerateResult(true);
-      const AllQuestions = questions.map((item) => ({
-        text: item.question || item,
-      }));
+      const newAnswers = [...Answers, currentAnswer];
+      setAnswers(newAnswers);
+      setCurrentAnswer("");
 
-      const allAnswers = [...Answers, currentAnswer];
-      const AnswersStructure = allAnswers.map(
-        (item, index) => `AnsNo:${index + 1}: ${item}`
-      );
-
-      const prompt = `Please evaluate the following answers based on the questions provided in the previous history. Rate each answer out of 5, then calculate the total percentage. Ensure that the answers align with the context and are concise and clear. provide only the total percentage , without any extra text." ${AnswersStructure.join(
-        "\n"
-      )}`;
-      try {
-        const ApiResponse = await GeminiApiCall(prompt, [
-          {
-            role: "user",
-            parts: [{ text: userdetail }, ...AllQuestions],
-          },
-        ]);
-        if (ApiResponse.trim().endsWith("%")) {
-          setResponse(ApiResponse.slice(0, -2));
-        } else if (ApiResponse.trim().length > 4) {
-          setResponse(0);
-        } else {
-          setResponse(ApiResponse);
+      if (index === questions.length - 1) {
+        setGenerateResult(true);
+        const jobDescription = `Job Title: ${jobTitle}\nExperience: ${userdetail.experience}\nSkills: ${userdetail.skills.join(", ")}`;
+        
+        // Analyze answers using Groq
+        const analyses = [];
+        for (let i = 0; i < questions.length; i++) {
+          const analysis = await analyzeAnswer(questions[i], newAnswers[i], jobDescription);
+          analyses.push(analysis);
         }
-      } catch (error) {
-        setError(error.code || error.message);
-        setGenerateResult(false);
+        
+        const finalAnalysis = analyses.join("\n\n");
+        setResponse(finalAnalysis);
+        setInterviewComplete(true);
+      } else {
+        setIndex(index + 1);
         setBtnDisable(false);
       }
+    } catch (error) {
+      setError(error.message);
+      setBtnDisable(false);
     }
   };
 
