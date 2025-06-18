@@ -40,7 +40,7 @@ const VoiceChat = () => {
                   ? "Stop Speaking"
                   : AskQuestion
                   ? "Listening"
-                  : "Speak Your Question"
+                  : "What's on your mind?"
               }
             />
           </div>

@@ -10,15 +10,16 @@ export const groq = axios.create({
 
 export const generateInterviewQuestion = async (jobDescription, previousQuestions = []) => {
   try {
-    const prompt = `You are an expert interviewer. Based on the following job description, generate a relevant interview question. 
-    Avoid questions that have already been asked: ${previousQuestions.join(", ")}.
+    const prompt = `Just write the question not other text, You are an expert interviewer. Based on the following job description, generate a relevant interview question. 
+    Avoid questions that have already been asked, include mostly those questions that can be answered verbly. Add some real life questions.
+    question should be short and concise but some technical and conceptual questions,question should be maximum 2 to 3 lines of length : ${previousQuestions.join(", ")}.
     
     Job Description: ${jobDescription}
     
     Generate a single, specific interview question that would help assess the candidate's suitability for this role.`;
 
     const response = await groq.post("/chat/completions", {
-      model: "mixtral-8x7b-32768",
+      model: "llama3-70b-8192",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.7,
       max_tokens: 150,
@@ -43,7 +44,7 @@ export const analyzeAnswer = async (question, answer, jobDescription) => {
     Provide a brief analysis of the answer, highlighting strengths and areas for improvement.`;
 
     const response = await groq.post("/chat/completions", {
-      model: "mixtral-8x7b-32768",
+      model: "llama3-70b-8192",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.7,
       max_tokens: 300,

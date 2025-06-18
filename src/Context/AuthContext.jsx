@@ -59,7 +59,8 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (error) {
-      let errorSlice = error.slice(0, 50);
+      let errorMessage = typeof error === 'string' ? error : error.message || 'An error occurred';
+      let errorSlice = errorMessage.slice(0, 50);
       toast.error(errorSlice, toastObj);
       setError(null);
     }

@@ -212,7 +212,14 @@ const InterviewContextProvider = ({ children }) => {
   const onSubmit = async (formData) => {
     try {
       setGenerateQuestions(true);
-      const jobDescription = `Job Title: ${formData.jobTitle}\nExperience: ${formData.experience}\nSkills: ${formData.skills.join(", ")}`;
+      setBtnDisable(true);
+      
+      // Ensure we have all required fields
+      if (!formData.JobTitle || !formData.Experience || !value.length) {
+        throw new Error("Please fill in all required fields including skills");
+      }
+
+      const jobDescription = `Job Title: ${formData.JobTitle}\nExperience: ${formData.Experience}\nSkills: ${value.join(", ")}`;
       
       // Generate questions using Groq
       const questions = [];
@@ -222,15 +229,27 @@ const InterviewContextProvider = ({ children }) => {
       }
       
       setQuestions(questions);
-      setJobTitle(formData.jobTitle);
-      setUserDetail(formData);
+      setJobTitle(formData.JobTitle);
+      setUserDetail({
+        ...formData,
+        skills: value
+      });
       setGenerateQuestions(false);
-      navigate("/interview-questions", {
-        state: { questions, jobTitle: formData.jobTitle, userDetails: formData },
+      setBtnDisable(false);
+      navigate("/interview", {
+        state: { 
+          questions, 
+          jobTitle: formData.JobTitle, 
+          userDetails: {
+            ...formData,
+            skills: value
+          }
+        },
       });
     } catch (error) {
       setError(error.message);
       setGenerateQuestions(false);
+      setBtnDisable(false);
     }
   };
 

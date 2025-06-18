@@ -82,7 +82,7 @@ const ChatForm = () => {
         </div>
       </form>
       <p className="lg:font-semibold lg:text-base text-sm">
-        Developed by Muhammad Furqan.
+        Developed by Muhammad Aqeel.
       </p>
     </div>
   );
