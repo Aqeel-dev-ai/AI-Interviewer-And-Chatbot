@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import {
   createUserWithEmailAndPassword,
@@ -11,7 +12,7 @@ import {
   collection,
   query,
   where,
-  getDocs,
+  getDoc,
   serverTimestamp,
   setDoc,
   doc,
@@ -154,54 +155,71 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   };
-
+ 
   const signInWithGoogle = async (navigate) => {
     const provider = new GoogleAuthProvider();
     setError(null);
     setLoading(true);
+  
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-
-      const q = query(
-        collection(db, "users"),
-        where("email", "==", user.email)
-      );
-      const querySnapshot = await getDocs(q);
-
-      if (querySnapshot.empty) {
-        await setDoc(doc(db, "users", user.uid), {
+  
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+  
+      if (!userSnap.exists()) {
+        await setDoc(userRef, {
           name: user.displayName,
           email: user.email,
           createdAt: serverTimestamp(),
           UserId: user.uid,
         });
       }
+  
       navigate("/app");
     } catch (error) {
       setError(error.code);
+      console.error("Google Sign-in error:", error.code, error.message);
     } finally {
       setLoading(false);
     }
   };
+  
 
   const signIn = async (email, password, navigate) => {
     setError(null);
     if (!formValidation(email, password)) {
       return;
     }
-
+  
     setLoading(true);
-
+  
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+  
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+  
+      if (!userSnap.exists()) {
+        await setDoc(userRef, {
+          name: user.displayName || "", // Email/Password users may not have displayName
+          email: user.email,
+          createdAt: serverTimestamp(),
+          UserId: user.uid,
+        });
+      }
+  
       navigate("/app");
     } catch (error) {
       handleAuthError(error.code);
+      console.error("Email/Password Sign-in error:", error.code, error.message);
     } finally {
       setLoading(false);
     }
   };
+  
 
   const handleSignupSubmit = async (navigate) => {
     const success = await signup(

@@ -41,7 +41,9 @@ export const analyzeAnswer = async (question, answer, jobDescription) => {
     
     Job Description Context: ${jobDescription}
     
-    Provide a brief analysis of the answer, highlighting strengths and areas for improvement.`;
+    Provide a professional consise review of the answers as interviewers do, 
+    according to question and answer tell areas for improvements. 
+    Do not use other words. Give rating to the answer "e.g 5/10".`;
 
     const response = await groq.post("/chat/completions", {
       model: "llama3-70b-8192",

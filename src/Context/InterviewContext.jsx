@@ -25,6 +25,7 @@ const interviewContext = createContext({
   index: 0,
   setCurrentAnswer: "",
   currentAnswer: "",
+  analysisResults: [],
 });
 
 const InterviewContextProvider = ({ children }) => {
@@ -184,6 +185,7 @@ const InterviewContextProvider = ({ children }) => {
     location?.state?.userDetails || null
   );
   const { setError, User } = useAuth();
+  const [analysisResults, setAnalysisResults] = useState([]);
 
   useEffect(() => {
     if (response) {
@@ -284,12 +286,30 @@ const InterviewContextProvider = ({ children }) => {
         // Analyze answers using Groq
         const analyses = [];
         for (let i = 0; i < questions.length; i++) {
-          const analysis = await analyzeAnswer(questions[i], newAnswers[i], jobDescription);
-          analyses.push(analysis);
+          const analysisText = await analyzeAnswer(questions[i], newAnswers[i], jobDescription);
+          // Parse analysisText to extract rating and feedback
+          // Example expected format: "Rating: 7/10\nFeedback: Good try, but you need to improve these topics: ..."
+          let rating = 0;
+          let feedback = "";
+          const ratingMatch = analysisText.match(/Rating\s*[:\-]?\s*(\d{1,2})\s*\/\s*10/i);
+          if (ratingMatch) {
+            rating = parseInt(ratingMatch[1], 10);
+          }
+          const feedbackMatch = analysisText.match(/Feedback\s*[:\-]?\s*([\s\S]*)/i);
+          if (feedbackMatch) {
+            feedback = feedbackMatch[1].trim();
+          } else {
+            feedback = analysisText.trim();
+          }
+          analyses.push({
+            question: questions[i],
+            answer: newAnswers[i],
+            rating,
+            feedback
+          });
         }
-        
-        const finalAnalysis = analyses.join("\n\n");
-        setResponse(finalAnalysis);
+        setAnalysisResults(analyses);
+        setResponse(analyses); // for backward compatibility
         setInterviewComplete(true);
       } else {
         setIndex(index + 1);
@@ -322,6 +342,7 @@ const InterviewContextProvider = ({ children }) => {
         index,
         setCurrentAnswer,
         currentAnswer,
+        analysisResults,
       }}
     >
       {children}

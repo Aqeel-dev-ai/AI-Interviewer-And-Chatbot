@@ -19,7 +19,13 @@ const InterviewQuestions = () => {
     index,
     setCurrentAnswer,
     currentAnswer,
+    analysisResults,
   } = useInterviewContext();
+
+  // Calculate percentage from analysisResults
+  const totalScore = analysisResults.reduce((sum, q) => sum + (q.rating || 0), 0);
+  const maxScore = analysisResults.length * 10;
+  const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
 
   return (
     <div className="min-h-[calc(100dvh-80px)] py-6 w-full flex items-center justify-center">
@@ -69,7 +75,7 @@ const InterviewQuestions = () => {
             </div>
           </div>
         )}
-        {interviewComplete && <Result percentage={response} />}
+        {interviewComplete && <Result percentage={percentage} questionsAndAnswers={analysisResults} />}
         {!questions?.length && !interviewComplete && (
           <div className="w-full h-full lg:px-20 flex items-center justify-end flex-col gap-8 py-5">
             <p className="lg:text-3xl text-xl font-semibold text-center">
