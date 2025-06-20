@@ -11,6 +11,7 @@ import { ChatBotContextProvider } from "../Context/ChatBotContext";
 import ChatBot from "../Pages/ChatBot";
 import InterviewQuestions from "../Pages/InterviewQuestions";
 import NotFound from "../Components/NotFound";
+import About from "../Pages/About";
 
 const router = createBrowserRouter([
   {
@@ -60,6 +61,15 @@ const router = createBrowserRouter([
           <InterviewQuestions />
         </InterviewContextProvider>
       </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/about",
+    element: (
+      <>
+        <Layout />
+        <About />
+      </>
     ),
   },
   {

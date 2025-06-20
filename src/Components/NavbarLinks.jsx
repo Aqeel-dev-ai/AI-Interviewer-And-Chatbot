@@ -8,6 +8,7 @@ const NavbarLinks = ({ state }) => {
     { Page: "Home", Path: "/" },
     { Page: "ChatBot", Path: "/app" },
     { Page: "Interview Form", Path: "/interview-form" },
+    { Page: "About", Path: "/about" },
   ];
 
   return (
@@ -31,10 +32,10 @@ const NavbarLinks = ({ state }) => {
           );
         })}
         {User ? (
-          <Button text={"Logout"} Click={handleLogout} />
+          <Button text={"Logout"} Click={handleLogout} Class="!text-white" />
         ) : (
           <NavLink to="/login">
-            <Button text={"Get Started"} />
+            <Button text={"Get Started"} Class="!text-white" />
           </NavLink>
         )}
       </ul>

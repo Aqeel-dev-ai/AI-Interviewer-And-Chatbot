@@ -47,7 +47,7 @@ const Navbar = () => {
             />
           )}
           <img
-            src="/assets/Logo.jpeg"
+            src="/assets/Logo.webp"
             alt="logo"
             className="h-16 w-16 rounded-full object-cover md:h-20 md:w-20"
           />
@@ -69,11 +69,11 @@ const Navbar = () => {
           <Button
             text={"Logout"}
             Click={handleLogout}
-            Class={"hidden lg:flex"}
+            Class={"hidden lg:flex !text-white"}
           />
         ) : (
           <NavLink to={"/login"} className="hidden lg:flex">
-            <Button text={"Get Started"} />
+            <Button text={"Get Started"} Class="!text-white" />
           </NavLink>
         )}
       </nav>
