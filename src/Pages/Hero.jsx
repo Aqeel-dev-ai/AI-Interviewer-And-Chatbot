@@ -15,7 +15,7 @@ const Hero = () => {
           <h4 className="lg:text-xl 2xl:text-2xl text-lg font-semibold text-center lg:text-left text-gray-200">
             Boost your confidence and skills with our AI-powered mock interviews!
           </h4>
-          <NavLink to={`${User ? "/app" : "/login"} `}>
+          <NavLink to={`${User ? "/app" : "/login"}`}>
             <Button text={"Get Started"} Class="!text-white" />
           </NavLink>
         </div>

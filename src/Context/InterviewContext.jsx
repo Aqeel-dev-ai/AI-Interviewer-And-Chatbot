@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { generateInterviewQuestion, analyzeAnswer } from "../utilities/Groq";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -204,6 +204,24 @@ const InterviewContextProvider = ({ children }) => {
   // New state for countdown
   const [isPreparing, setIsPreparing] = useState(false);
   const [countdown, setCountdown] = useState(10);
+  
+  // New state for adaptive interview
+  const [consecutivePoorAnswers, setConsecutivePoorAnswers] = useState(0);
+  const [currentDifficulty, setCurrentDifficulty] = useState("normal");
+  const [isWaitingForConfirmation, setIsWaitingForConfirmation] = useState(false);
+  const speechTimeoutRef = useRef(null);
+  const silenceTimeoutRef = useRef(null);
+  const recognitionRef = useRef(null); // Ref to hold the recognition instance
+
+  const getRandomSkipPhrase = () => {
+    const phrases = [
+      "No problem, we can skip that one.",
+      "Alright, let's move to the next question.",
+      "That's fine. Let's try a different one.",
+      "Understood. Moving on to the next question."
+    ];
+    return phrases[Math.floor(Math.random() * phrases.length)];
+  };
 
   useEffect(() => {
     if (response) {
@@ -235,13 +253,7 @@ const InterviewContextProvider = ({ children }) => {
 
     if (countdown === 0) {
       setIsPreparing(false);
-      setIsInterviewing(true);
-      setIndex(0);
-      setAnswers([]);
-      setTranscript([{ speaker: "ai", text: questions[0] }]);
-      speakText(questions[0], () => {
-        startSpeechRecognition();
-      });
+      startCustomInterviewFlow(); // Start with the custom greeting and question
       return;
     }
 
@@ -331,91 +343,172 @@ const InterviewContextProvider = ({ children }) => {
     setIsListening(true);
     const recognition = new (window.SpeechRecognition ||
       window.webkitSpeechRecognition)();
+    recognitionRef.current = recognition; // Store the instance
     recognition.lang = "en-US";
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    recognition.start();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    // If user says nothing for 10s, ask to repeat or skip.
+    silenceTimeoutRef.current = setTimeout(() => {
+        recognition.stop();
+        setIsListening(false);
+        setIsWaitingForConfirmation(true);
+        speakText("I didn't hear anything. Should I repeat the question, or do you want to move to the next one?", () => {
+            startSpeechRecognition();
+        });
+    }, 10000);
 
     recognition.onresult = (event) => {
-      const spokenText = event.results[0][0].transcript;
-      recognition.stop();
-      setIsListening(false);
-      if (spokenText.trim() === "") {
-        speakText("I didn't catch that. Could you please repeat your answer?", () => {
-          startSpeechRecognition();
-        });
-        return;
-      }
-      setTranscript((prev) => [...prev, { speaker: "user", text: spokenText }]);
-      handleUserAnswer(spokenText);
-    };
+      // User has started speaking, so clear both timeouts.
+      clearTimeout(silenceTimeoutRef.current);
+      clearTimeout(speechTimeoutRef.current);
 
+      let finalTranscript = "";
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+          finalTranscript += event.results[i][0].transcript;
+      }
+      
+      // Wait for a 4-second pause in speech before finalizing answer.
+      speechTimeoutRef.current = setTimeout(() => {
+        recognition.stop();
+        setIsListening(false);
+        const finalAnswer = finalTranscript.trim();
+        if (finalAnswer) {
+          setTranscript((prev) => [...prev, { speaker: "user", text: finalAnswer }]);
+          handleUserAnswer(finalAnswer);
+        }
+      }, 4000);
+    };
+    
     recognition.onerror = (event) => {
+      clearTimeout(silenceTimeoutRef.current);
+      clearTimeout(speechTimeoutRef.current);
       setIsListening(false);
-      setError(event.error);
-      if (event.error === "no-speech") {
-        speakText("I didn't hear an answer. Let's try again.", () => {
-          startSpeechRecognition();
-        });
+      // Handle errors other than 'no-speech', which is covered by our timeout.
+      if (event.error !== "no-speech") {
+         console.error("Speech recognition error:", event.error);
+         speakText("I'm having a little trouble hearing. Let's try that question again.", () => speakText(questions[index], () => startSpeechRecognition()));
       }
     };
-
+    
     recognition.onend = () => {
-      setIsListening(false);
-    };
+        clearTimeout(silenceTimeoutRef.current);
+        clearTimeout(speechTimeoutRef.current);
+        setIsListening(false);
+    }
+
+    recognition.start();
+  };
+
+  const askNewQuestion = async (difficulty = "normal") => {
+    const jobDescription = `Job Title: ${jobTitle}\nExperience: ${userdetail.experience}\nSkills: ${userdetail.skills.join(", ")}`;
+    const newQuestion = await generateInterviewQuestion(jobDescription, questions, difficulty);
+    setQuestions(prev => [...prev, newQuestion]); // Add new question to history
+    setTranscript(prev => [...prev, { speaker: "ai", text: newQuestion }]);
+    speakText(newQuestion, () => {
+      startSpeechRecognition();
+    });
   };
 
   const handleUserAnswer = async (answer) => {
-    const newAnswers = [...Answers, answer];
-    setAnswers(newAnswers);
+    const lowerCaseAnswer = answer.toLowerCase();
+    console.log("--- handleUserAnswer triggered ---");
+    console.log(`Answer received: "${lowerCaseAnswer}"`);
+    console.log(`'isWaitingForConfirmation' is currently: ${isWaitingForConfirmation}`);
 
-    if (index >= questions.length - 1) {
-      setGenerateResult(true);
-      const jobDescription = `Job Title: ${jobTitle}\nExperience: ${
-        userdetail.experience
-      }\nSkills: ${userdetail.skills.join(", ")}`;
-
-      const analyses = [];
-      for (let i = 0; i < questions.length; i++) {
-        const currentQuestionAnswer = i === index ? answer : newAnswers[i-1];
-        const analysisText = await analyzeAnswer(
-          questions[i],
-          currentQuestionAnswer,
-          jobDescription
-        );
-
-        let rating = 0;
-        let feedback = "";
-        const ratingMatch = analysisText.match(
-          /Rating\s*[:\-]?\s*(\d{1,2})\s*\/\s*10/i
-        );
-        if (ratingMatch) {
-          rating = parseInt(ratingMatch[1], 10);
-        }
-        const feedbackMatch = analysisText.match(
-          /Feedback\s*[:\-]?\s*([\s\S]*)/i
-        );
-        if (feedbackMatch) {
-          feedback = feedbackMatch[1].trim();
-        } else {
-          feedback = analysisText.trim();
-        }
-        analyses.push({
-          question: questions[i],
-          answer: currentQuestionAnswer,
-          rating,
-          feedback,
+    // 1. Check if we are waiting for a "repeat" or "skip" confirmation
+    if (isWaitingForConfirmation) {
+      console.log("Entering confirmation logic branch.");
+      setIsWaitingForConfirmation(false);
+      if (lowerCaseAnswer.includes("repeat")) {
+        console.log("Action: Repeating the question.");
+        speakText(`Of course. The question was: ${questions[index]}`, () => {
+          startSpeechRecognition();
+        });
+      } else if (lowerCaseAnswer.includes("skip") || lowerCaseAnswer.includes("next")) {
+        console.log("Action: Skipping question after confirmation.");
+        const skipResponse = getRandomSkipPhrase();
+        setTranscript(prev => [...prev, { speaker: "ai", text: skipResponse }]);
+        speakText(skipResponse, () => moveToNextQuestion());
+      } else {
+        console.log("Action: Confirmation not understood, re-asking.");
+        speakText("My apologies, I didn't understand. Let's try the question again.", () => {
+           speakText(questions[index], () => startSpeechRecognition());
         });
       }
-      setAnalysisResults(analyses);
-      setResponse(analyses);
+      return; // Stop further processing
+    }
 
-      const endMessage =
-        "Thank you. Your interview is now complete. We are now generating your results.";
+    // 2. Check for keywords if not in a confirmation state
+    console.log("Checking for standard keywords...");
+    const skipPhrases = ["i don't know", "skip", "pass", "i do not know", "no idea", "next question"];
+    if (skipPhrases.some(phrase => lowerCaseAnswer.includes(phrase))) {
+      console.log("Action: 'skip' keyword detected. Moving to next question.");
+      const skipResponse = getRandomSkipPhrase();
+      setTranscript(prev => [...prev, { speaker: "ai", text: skipResponse }]);
+      speakText(skipResponse, () => moveToNextQuestion());
+      return; // Stop further processing
+    }
+
+    if (lowerCaseAnswer.includes("simple question") || lowerCaseAnswer.includes("easier question")) {
+      console.log("Action: 'simple question' keyword detected. Asking a basic question.");
+      speakText("Of course, let's try a more fundamental question.", () => {
+        askNewQuestion("basic");
+      });
+      return; // Stop further processing
+    }
+    
+    // 3. If no keywords, proceed with analyzing the answer
+    console.log("No keywords detected. Proceeding to analyze answer.");
+    if (answer.length < 10) {
+       console.log("Answer is too short. Re-phrasing question.");
+       speakText("I think you might have misunderstood. Let me rephrase that for you.", () => {
+           const currentQuestion = questions[index];
+           speakText(currentQuestion, () => startSpeechRecognition());
+       });
+       return;
+    }
+
+    console.log("Analyzing the answer for feedback and rating.");
+    const newAnswers = [...Answers, { question: questions[index], answer }];
+    setAnswers(newAnswers);
+
+    const jobDescription = `Job Title: ${jobTitle}\nExperience: ${userdetail.experience}\nSkills: ${userdetail.skills.join(", ")}`;
+    const analysisText = await analyzeAnswer(questions[index], answer, jobDescription);
+    
+    let rating = 0;
+    const ratingMatch = analysisText.match(/Rating\s*[:\-]?\s*(\d{1,2})\s*\/\s*10/i);
+    if (ratingMatch) {
+      rating = parseInt(ratingMatch[1], 10);
+    }
+    
+    if (rating < 5) {
+      const newPoorCount = consecutivePoorAnswers + 1;
+      setConsecutivePoorAnswers(newPoorCount);
+      if (newPoorCount >= 2) {
+        setCurrentDifficulty("basic");
+        speakText("Let's switch gears and try a more fundamental topic.", () => moveToNextQuestion("basic"));
+        return;
+      }
+    } else {
+      setConsecutivePoorAnswers(0);
+      setCurrentDifficulty("normal");
+    }
+
+    moveToNextQuestion();
+  };
+  
+  const moveToNextQuestion = (difficulty = "normal") => {
+    if (index >= questions.length - 1) {
+      // End of original questions, proceed to generate results
+      setGenerateResult(true);
+      const endMessage = "Thank you. Your interview is now complete. We are generating your results.";
       setTranscript((prev) => [...prev, { speaker: "ai", text: endMessage }]);
       speakText(endMessage, () => {
         stopVoiceInterview();
         setInterviewComplete(true);
+        // Trigger result saving
+        setResponse(Answers); 
       });
     } else {
       const nextIndex = index + 1;
@@ -428,8 +521,29 @@ const InterviewContextProvider = ({ children }) => {
     }
   };
 
+  const startCustomInterviewFlow = () => {
+    const greeting = `Hello ${User?.displayName || 'there'}, welcome to your interview for the ${jobTitle} role. I see you have ${userdetail.experience} experience. Let's begin.`;
+    const firstQuestion = `To start, could you please tell me a bit about your journey and what led you to apply for this ${jobTitle} position?`;
+
+    // Prepend the custom question to the AI-generated list
+    const allQuestions = [firstQuestion, ...questions];
+    setQuestions(allQuestions);
+    setIndex(0);
+    setAnswers([]);
+    
+    setTranscript([{ speaker: "ai", text: greeting }, { speaker: "ai", text: firstQuestion }]);
+    
+    setIsInterviewing(true);
+
+    speakText(greeting, () => {
+        speakText(firstQuestion, () => {
+            startSpeechRecognition();
+        });
+    });
+  };
+
   const startVoiceInterview = () => {
-    if (questions && questions.length > 0) {
+    if (questions && questions.length > 0 && userdetail) {
       setIsPreparing(true);
       setCountdown(10);
     } else {
@@ -440,10 +554,21 @@ const InterviewContextProvider = ({ children }) => {
 
   const stopVoiceInterview = () => {
     window.speechSynthesis.cancel();
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    clearTimeout(silenceTimeoutRef.current);
+    clearTimeout(speechTimeoutRef.current);
+
     setIsInterviewing(false);
     setIsListening(false);
     setIsSpeaking(false);
     setIsPreparing(false);
+    
+    // Immediately show results
+    setInterviewComplete(true);
+    setResponse(Answers); // Ensure results are set for display
+    console.log("Interview stopped by user. Finalizing results.");
   };
 
   const handleNextQuestion = async () => {
