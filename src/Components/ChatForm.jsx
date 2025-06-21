@@ -20,7 +20,7 @@ const ChatForm = () => {
   } = useChatBotContext();
 
   return (
-    <div className="w-full h-[90px] flex items-center justify-between flex-col gap-2 absolute bottom-0 px-2">
+    <div className="w-full h-[90px] flex items-center justify-between flex-col gap-2 px-2">
       <form
         onSubmit={handleSend}
         className="w-full h-full flex items-center justify-center"

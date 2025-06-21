@@ -10,15 +10,14 @@ const ChatBot = () => {
 
   return (
     <div className="h-[calc(100dvh-80px)]  w-full flex items-center justify-center">
-      <div className="h-full w-full lg:w-[1000px] 2xl:w-[1200px] relative">
+      <div className="h-full w-full lg:w-[1000px] 2xl:w-[1200px] flex flex-col">
         {voiceChat ? (
           <VoiceChat />
         ) : (
           <>
-            <ChatForm />
-            <div className="w-full h-[calc(100%-110px)] flex flex-col items-center gap-7 overflow-y-auto scroll-smooth chat-Div mt-5">
+            <div className="flex-grow w-full h-full overflow-y-auto scroll-smooth chat-Div">
               {!isChat && (
-                <div className="w-full h-full flex items-center justify-center flex-col gap-4 px-2 mt-10">
+                <div className="w-full h-full flex items-center justify-center flex-col gap-4 px-2">
                   <h2 className="2xl:text-5xl font-bold text-4xl text-center">
                     Hi 👏 {fetchUserName ? "User" : userName}
                   </h2>
@@ -33,6 +32,7 @@ const ChatBot = () => {
                 <ChatList userName={userName} />
               )}
             </div>
+            <ChatForm />
           </>
         )}
       </div>

@@ -270,17 +270,35 @@ const InterviewContextProvider = ({ children }) => {
     return () => clearTimeout(timerId);
   }, [isPreparing, countdown, questions]);
 
-  const onSubmit = async (formData) => {
+  const onSubmit = async (formData, formType = "manual") => {
     try {
       setGenerateQuestions(true);
       setBtnDisable(true);
       
-      // Ensure we have all required fields
-      if (!formData.JobTitle || !formData.Experience || !value.length) {
-        throw new Error("Please fill in all required fields including skills");
-      }
+      let jobDescription = "";
+      let userDetailsPayload = {};
 
-      const jobDescription = `Job Title: ${formData.JobTitle}\nExperience: ${formData.Experience}\nSkills: ${value.join(", ")}`;
+      if (formType === "resume") {
+        if (!formData.JobTitle || !formData.Experience || !formData.resumeText) {
+          throw new Error("Please provide a job title, experience level, and a valid resume.");
+        }
+        jobDescription = `Job Title: ${formData.JobTitle}\nExperience: ${formData.Experience}\nResume Content: ${formData.resumeText}`;
+        userDetailsPayload = {
+          JobTitle: formData.JobTitle,
+          Experience: formData.Experience,
+          skills: ["Parsed from resume"],
+        }
+      } else {
+        // Manual form submission
+        if (!formData.JobTitle || !formData.Experience || !value.length) {
+          throw new Error("Please fill in all required fields including skills");
+        }
+        jobDescription = `Job Title: ${formData.JobTitle}\nExperience: ${formData.Experience}\nSkills: ${value.join(", ")}`;
+        userDetailsPayload = {
+          ...formData,
+          skills: value
+        }
+      }
       
       // Generate questions using Groq
       const questions = [];
@@ -291,20 +309,15 @@ const InterviewContextProvider = ({ children }) => {
       
       setQuestions(questions);
       setJobTitle(formData.JobTitle);
-      setUserDetail({
-        ...formData,
-        skills: value
-      });
+      setUserDetail(userDetailsPayload);
+
       setGenerateQuestions(false);
       setBtnDisable(false);
       navigate("/interview", {
         state: { 
           questions, 
           jobTitle: formData.JobTitle, 
-          userDetails: {
-            ...formData,
-            skills: value
-          }
+          userDetails: userDetailsPayload
         },
       });
     } catch (error) {
