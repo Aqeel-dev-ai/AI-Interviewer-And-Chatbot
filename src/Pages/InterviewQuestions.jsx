@@ -19,13 +19,22 @@ const InterviewQuestions = () => {
     stopVoiceInterview,
     isPreparing,
     countdown,
+    userStream,
+    isCameraOn,
   } = useInterviewContext();
   const { User } = useAuth();
   const transcriptEndRef = useRef(null);
+  const userVideoRef = useRef(null);
 
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [transcript]);
+
+  useEffect(() => {
+    if (userStream && userVideoRef.current) {
+      userVideoRef.current.srcObject = userStream;
+    }
+  }, [userStream, isInterviewing]);
 
   const totalScore = analysisResults.reduce((sum, q) => sum + (q.rating || 0), 0);
   const maxScore = analysisResults.length * 10;
@@ -70,8 +79,27 @@ const InterviewQuestions = () => {
      <>
       <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
         {/* User Box */}
-        <div className={`bg-gray-900/50 backdrop-blur-sm border-2 rounded-2xl aspect-video flex flex-col justify-end p-4 ${isListening ? 'border-green-500' : 'border-gray-700'}`}>
-           <h3 className="text-white font-semibold">{User?.displayName || "You"}</h3>
+        <div
+          className={`relative bg-black border-2 rounded-2xl aspect-video overflow-hidden ${
+            isListening ? "border-green-500" : "border-gray-700"
+          }`}
+        >
+          {isCameraOn && userStream ? (
+            <video
+              ref={userVideoRef}
+              autoPlay
+              muted
+              playsInline
+              className="w-full h-full object-cover"
+            ></video>
+          ) : (
+            <div className="w-full h-full bg-gray-900 flex items-center justify-center">
+              <p className="text-white">Camera is off</p>
+            </div>
+          )}
+          <h3 className="absolute bottom-4 left-4 text-white font-semibold bg-black/50 px-2 py-1 rounded">
+            you
+          </h3>
         </div>
         {/* AI Box */}
         <div className={`bg-gray-900/50 backdrop-blur-sm border-2 rounded-2xl aspect-video flex flex-col justify-center items-center p-4 ${isSpeaking ? 'border-blue-500' : 'border-gray-700'}`}>

@@ -34,6 +34,8 @@ const interviewContext = createContext({
   stopVoiceInterview: () => {},
   isPreparing: false,
   countdown: 10,
+  userStream: null,
+  isCameraOn: false,
 });
 
 const InterviewContextProvider = ({ children }) => {
@@ -194,6 +196,10 @@ const InterviewContextProvider = ({ children }) => {
   );
   const { setError, User } = useAuth();
   const [analysisResults, setAnalysisResults] = useState([]);
+
+  // New state for video
+  const [userStream, setUserStream] = useState(null);
+  const [isCameraOn, setIsCameraOn] = useState(false);
 
   // New state for voice interview
   const [transcript, setTranscript] = useState([]);
@@ -542,10 +548,24 @@ const InterviewContextProvider = ({ children }) => {
     });
   };
 
-  const startVoiceInterview = () => {
+  const startVoiceInterview = async () => {
     if (questions && questions.length > 0 && userdetail) {
-      setIsPreparing(true);
-      setCountdown(10);
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
+        setUserStream(stream);
+        setIsCameraOn(true);
+        setIsPreparing(true);
+        setCountdown(5);
+      } catch (err) {
+        console.error("Error accessing media devices:", err);
+        setError(
+          "Camera and microphone access are required for a video interview. Please grant permission and try again."
+        );
+        navigate("/interview-form");
+      }
     } else {
       setError("No questions generated. Please fill the form first.");
       navigate("/interview-form");
@@ -559,6 +579,12 @@ const InterviewContextProvider = ({ children }) => {
     }
     clearTimeout(silenceTimeoutRef.current);
     clearTimeout(speechTimeoutRef.current);
+
+    if (userStream) {
+      userStream.getTracks().forEach((track) => track.stop());
+      setUserStream(null);
+    }
+    setIsCameraOn(false);
 
     setIsInterviewing(false);
     setIsListening(false);
@@ -655,6 +681,8 @@ const InterviewContextProvider = ({ children }) => {
         stopVoiceInterview,
         isPreparing,
         countdown,
+        userStream,
+        isCameraOn,
       }}
     >
       {children}

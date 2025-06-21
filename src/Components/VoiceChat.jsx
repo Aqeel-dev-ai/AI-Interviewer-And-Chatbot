@@ -30,13 +30,20 @@ const VoiceChat = () => {
             alt="voice"
             className="size-60 object-contain xl:size-80"
           />
-          <div className="flex items-center justify-center">
+          <div className="flex flex-col items-center justify-center gap-4">
+            <p className="text-xl font-medium text-gray-300 h-8">
+              {isConversation
+                ? "Talking..."
+                : AskQuestion
+                ? "Listening..."
+                : "Click the button to talk"}
+            </p>
             <Button
               disable={disable}
               Click={isConversation ? handleCancel : handleVoiceChat}
               icon={<KeyboardVoiceRounded />}
-              text={
-                isConversation
+              text={ 
+                isConversation 
                   ? "Stop Speaking"
                   : AskQuestion
                   ? "Listening"
