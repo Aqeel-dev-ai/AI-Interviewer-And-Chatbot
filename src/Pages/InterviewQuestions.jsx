@@ -108,7 +108,7 @@ const InterviewQuestions = () => {
         </div>
       </div>
       {/* Transcript Panel */}
-      <div className="w-full md:w-80 bg-gray-900/50 backdrop-blur-sm border border-gray-700 rounded-2xl p-6 flex flex-col">
+      <div className="w-full md:w-80 h-96 md:h-auto bg-gray-900/50 backdrop-blur-sm border border-gray-700 rounded-2xl p-6 flex flex-col">
         <h2 className="text-xl font-bold text-white mb-4 flex-shrink-0">Transcript</h2>
          <div className="flex-grow overflow-y-auto custom-sidebar pr-2">
             {transcript.map((item, index) => (
@@ -138,7 +138,7 @@ const InterviewQuestions = () => {
         </div>
       ) : null}
       
-      <div className="w-full max-w-7xl flex flex-col md:flex-row items-center gap-8 z-10 flex-grow">
+      <div className="w-full max-w-7xl flex flex-col md:flex-row items-center md:items-stretch gap-8 z-10 flex-grow">
           {isInterviewing ? InterviewingUI : PreInterviewUI}
       </div>
 
