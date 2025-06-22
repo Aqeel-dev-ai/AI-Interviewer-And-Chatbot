@@ -1,10 +1,6 @@
 import { useState } from "react";
-import TagInput from "../Components/TagInput";
+import TagInput from "../Components/TagInput.jsx";
 import { useInterviewContext } from "../Context/InterviewContext";
-import * as pdfjs from "pdfjs-dist";
-
-// Set the workerSrc for pdfjs from a CDN
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
 
 const InterviewForm = () => {
   const {
@@ -41,6 +37,9 @@ const InterviewForm = () => {
     setIsParsing(true);
 
     try {
+      const pdfjs = await import("pdfjs-dist");
+      pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@latest/build/pdf.worker.min.mjs`;
+
       const reader = new FileReader();
       reader.onload = async (event) => {
         try {
@@ -76,7 +75,7 @@ const InterviewForm = () => {
     onSubmit({ ...data, resumeText }, "resume");
   };
 
-  const ManualForm = () => (
+  const ManualForm = (
     <form
       onSubmit={handleSubmit(onSubmit)}
       className="w-full grid grid-cols-1 gap-6 lg:px-10 px-3"
@@ -202,7 +201,7 @@ const InterviewForm = () => {
     </form>
   );
 
-  const ResumeForm = () => (
+  const ResumeForm = (
      <form
       onSubmit={handleSubmit(handleResumeSubmit)}
       className="w-full grid grid-cols-1 gap-6 lg:px-10 px-3"
@@ -326,7 +325,7 @@ const InterviewForm = () => {
         </div>
 
         <div className="flex flex-col h-full w-full gap-7 px-1">
-         {formMode === 'manual' ? <ManualForm /> : <ResumeForm />}
+         {formMode === 'manual' ? ManualForm : ResumeForm}
 
           <div className="w-full lg:px-10 flex flex-col lg:flex-row gap-1 items-center justify-center px-3 mt-4">
             <h1 className="self-start text-lg font-semibold">Note:</h1>
