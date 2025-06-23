@@ -59,7 +59,7 @@ const InterviewQuestions = () => {
         </div>
         {/* AI Box */}
         <div className="bg-gray-900/50 backdrop-blur-sm border border-gray-700 rounded-2xl aspect-video flex flex-col justify-center items-center p-4">
-          <img src="/assets/responseDp.png" alt="Nova AI" className="w-24 h-24 rounded-full mb-4" />
+          <img src="/assets/Voice1.webp" alt="Nova AI" className="w-24 h-24 rounded-full mb-4" />
           <h3 className="text-white font-semibold">Nova</h3>
         </div>
       </div>
@@ -67,7 +67,7 @@ const InterviewQuestions = () => {
       <div className="w-full md:w-80 bg-gray-900/50 backdrop-blur-sm border border-gray-700 rounded-2xl p-6 flex-shrink-0">
         <h2 className="text-xl font-bold text-white mb-4">Transcripts</h2>
         <div className="h-full flex flex-col items-center justify-center text-center">
-            <img src="/assets/robot2.jpg" alt="illustration" className="w-32 h-32 mb-4" />
+            <img src="/assets/Favicon.jpg" alt="illustration" className="w-32 h-32 mb-4" />
             <p className="text-gray-400">Click "Start Interview" to get started.</p>
             <p className="text-gray-400 mt-2 text-sm">You can skip a question or ask for a simpler one during the interview.</p>
         </div>
@@ -103,7 +103,7 @@ const InterviewQuestions = () => {
         </div>
         {/* AI Box */}
         <div className={`bg-gray-900/50 backdrop-blur-sm border-2 rounded-2xl aspect-video flex flex-col justify-center items-center p-4 ${isSpeaking ? 'border-blue-500' : 'border-gray-700'}`}>
-          <img src="/assets/responseDp.png" alt="Nova AI" className="w-24 h-24 rounded-full mb-4" />
+          <img src="/assets/Voice1.webp" alt="Nova AI" className="w-24 h-24 rounded-full mb-4" />
           <h3 className="text-white font-semibold">Nova</h3>
         </div>
       </div>

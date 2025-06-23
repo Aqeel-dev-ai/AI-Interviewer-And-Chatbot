@@ -208,6 +208,7 @@ const InterviewContextProvider = ({ children }) => {
   const speechTimeoutRef = useRef(null);
   const silenceTimeoutRef = useRef(null);
   const recognitionRef = useRef(null);
+  const currentQuestionIndexRef = useRef(0);
 
   useEffect(() => {
     if (response) {
@@ -317,24 +318,72 @@ const InterviewContextProvider = ({ children }) => {
 
   // Voice Interview Logic
   const speakText = (text, onEndCallback) => {
-    if (!text) return;
+    if (!text) {
+      if (onEndCallback) onEndCallback();
+      return;
+    }
+    
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+    
     setIsSpeaking(true);
     setIsListening(false);
+    
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "en-US";
     utterance.pitch = 1;
-    utterance.rate = 1;
+    utterance.rate = 0.9; // Slightly slower for better clarity
     utterance.volume = 1;
+    
     utterance.onend = () => {
       setIsSpeaking(false);
       if (onEndCallback) {
         onEndCallback();
       }
     };
-    window.speechSynthesis.speak(utterance);
+    
+    utterance.onerror = (event) => {
+      console.error("Speech synthesis error:", event);
+      setIsSpeaking(false);
+      if (onEndCallback) {
+        onEndCallback();
+      }
+    };
+    
+    try {
+      window.speechSynthesis.speak(utterance);
+    } catch (error) {
+      console.error("Error starting speech synthesis:", error);
+      setIsSpeaking(false);
+      if (onEndCallback) {
+        onEndCallback();
+      }
+    }
   };
 
   const startSpeechRecognition = () => {
+    if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+      console.error("Speech recognition not supported");
+      setError("Speech recognition is not supported in your browser. Please use Chrome or Edge.");
+      return;
+    }
+
+    // Prevent multiple speech recognition instances
+    if (recognitionRef.current) {
+      console.log("Speech recognition already running, stopping previous instance");
+      try {
+        recognitionRef.current.stop();
+      } catch (error) {
+        console.error("Error stopping previous recognition:", error);
+      }
+    }
+
+    // Use the ref to get the current question index
+    const currentIndex = currentQuestionIndexRef.current;
+    const currentQuestion = questions[currentIndex];
+    
+    console.log(`Starting speech recognition for question ${currentIndex + 1}: ${currentQuestion}`);
+
     setIsListening(true);
     const recognition = new (window.SpeechRecognition ||
       window.webkitSpeechRecognition)();
@@ -343,11 +392,20 @@ const InterviewContextProvider = ({ children }) => {
     recognition.continuous = true;
     recognition.interimResults = true;
 
+    // Clear any existing timeouts
+    if (silenceTimeoutRef.current) {
+      clearTimeout(silenceTimeoutRef.current);
+    }
+    if (speechTimeoutRef.current) {
+      clearTimeout(speechTimeoutRef.current);
+    }
+
     silenceTimeoutRef.current = setTimeout(() => {
+        console.log("Silence timeout - no speech detected");
         recognition.stop();
         setIsListening(false);
         speakText("I didn't hear anything. Let me repeat the question.", () => {
-            speakText(questions[index], () => startSpeechRecognition());
+            speakText(currentQuestion, () => startSpeechRecognition());
         });
     }, 10000);
 
@@ -360,13 +418,22 @@ const InterviewContextProvider = ({ children }) => {
         combinedTranscript += event.results[i][0].transcript;
       }
       
+      console.log(`Speech detected: ${combinedTranscript}`);
+      
       speechTimeoutRef.current = setTimeout(() => {
         recognition.stop();
         setIsListening(false);
         const finalAnswer = combinedTranscript.trim();
         if (finalAnswer) {
+          console.log(`Processing answer for question ${currentIndex + 1}`);
           setTranscript((prev) => [...prev, { speaker: "user", text: finalAnswer }]);
-          handleUserAnswer(finalAnswer);
+          handleUserAnswer(finalAnswer, currentIndex);
+        } else {
+          // If no answer was captured, restart recognition
+          console.log("No answer captured, restarting recognition");
+          speakText("I didn't catch that. Could you please repeat your answer?", () => {
+            startSpeechRecognition();
+          });
         }
       }, 3000);
     };
@@ -375,56 +442,111 @@ const InterviewContextProvider = ({ children }) => {
       clearTimeout(silenceTimeoutRef.current);
       clearTimeout(speechTimeoutRef.current);
       setIsListening(false);
+      
+      console.error("Speech recognition error:", event.error);
+      
       if (event.error !== "no-speech") {
-         console.error("Speech recognition error:", event.error);
          speakText("I'm having trouble hearing. Let me repeat the question.", () => 
-           speakText(questions[index], () => startSpeechRecognition())
+           speakText(currentQuestion, () => startSpeechRecognition())
          );
       }
     };
     
     recognition.onend = () => {
+        console.log("Speech recognition ended");
         clearTimeout(silenceTimeoutRef.current);
         clearTimeout(speechTimeoutRef.current);
         setIsListening(false);
     }
 
-    recognition.start();
+    try {
+      recognition.start();
+      console.log("Speech recognition started successfully");
+    } catch (error) {
+      console.error("Error starting speech recognition:", error);
+      setIsListening(false);
+      setError("Failed to start speech recognition. Please try again.");
+    }
   };
 
-  const handleUserAnswer = async (answer) => {
+  const handleUserAnswer = async (answer, questionIndex) => {
+    const currentQuestion = questions[questionIndex];
+    
+    console.log(`handleUserAnswer called for question ${questionIndex + 1}: ${currentQuestion}`);
+    console.log(`Answer received: ${answer}`);
+    
     if (answer.length < 10) {
+       console.log("Answer too short, asking for more detail");
        speakText("Could you please provide a more detailed answer?", () => {
-           speakText(questions[index], () => startSpeechRecognition());
+           speakText(currentQuestion, () => startSpeechRecognition());
        });
        return;
     }
 
-    const newAnswers = [...Answers, { question: questions[index], answer }];
+    console.log("Processing valid answer");
+    const newAnswers = [...Answers, { question: currentQuestion, answer }];
     setAnswers(newAnswers);
 
-    const jobDescription = `Job Title: ${jobTitle}\nExperience: ${userdetail.experience}\nSkills: ${userdetail.skills.join(", ")}`;
-    await analyzeAnswer(questions[index], answer, jobDescription);
+    try {
+      const jobDescription = `Job Title: ${jobTitle}\nExperience: ${userdetail.Experience || userdetail.experience}\nSkills: ${userdetail.skills.join(", ")}`;
+      const analysis = await analyzeAnswer(currentQuestion, answer, jobDescription);
+      
+      // Store the analysis result
+      setAnalysisResults(prev => [...prev, {
+        question: currentQuestion,
+        answer,
+        analysis
+      }]);
+      console.log("Answer analysis completed");
+    } catch (error) {
+      console.error("Error analyzing answer:", error);
+      // Continue with the interview even if analysis fails
+    }
 
-    moveToNextQuestion();
+    console.log("Calling moveToNextQuestion");
+    moveToNextQuestion(questionIndex);
   };
   
-  const moveToNextQuestion = () => {
-    if (index >= questions.length - 1) {
+  const moveToNextQuestion = (currentIndex) => {
+    console.log(`moveToNextQuestion called. Current index: ${currentIndex}, Total questions: ${questions.length}`);
+    
+    if (currentIndex >= questions.length - 1) {
+      console.log("Interview complete - all questions answered");
       const endMessage = "Thank you. Your interview is now complete. We are generating your results.";
       setTranscript((prev) => [...prev, { speaker: "ai", text: endMessage }]);
       speakText(endMessage, () => {
+        // Stop the interview and set the response
         stopVoiceInterview();
         setInterviewComplete(true);
         setResponse(Answers); 
       });
     } else {
-      const nextIndex = index + 1;
-      setIndex(nextIndex);
+      const nextIndex = currentIndex + 1;
       const nextQuestion = questions[nextIndex];
-      setTranscript((prev) => [...prev, { speaker: "ai", text: nextQuestion }]);
-      speakText(nextQuestion, () => {
-        startSpeechRecognition();
+      
+      console.log(`Moving to question ${nextIndex + 1}: ${nextQuestion}`);
+      
+      // Update both state and ref
+      setIndex(nextIndex);
+      currentQuestionIndexRef.current = nextIndex;
+      
+      // Add a brief pause and transition message
+      const transitionMessage = "Thank you for that answer. Here's your next question.";
+      setTranscript((prev) => [...prev, { speaker: "ai", text: transitionMessage }]);
+      
+      speakText(transitionMessage, () => {
+        setTimeout(() => {
+          // Ask the next question
+          console.log(`Setting index to ${nextIndex}`);
+          setTranscript((prev) => [...prev, { speaker: "ai", text: nextQuestion }]);
+          speakText(nextQuestion, () => {
+            // Use a small delay to ensure state is updated
+            setTimeout(() => {
+              console.log(`Starting speech recognition for next question (index: ${nextIndex})`);
+              startSpeechRecognition();
+            }, 100);
+          });
+        }, 1000); // 1 second pause between questions
       });
     }
   };
@@ -434,6 +556,7 @@ const InterviewContextProvider = ({ children }) => {
     const firstQuestion = questions[0];
 
     setIndex(0);
+    currentQuestionIndexRef.current = 0; // Initialize the ref
     setAnswers([]);
     
     setTranscript([{ speaker: "ai", text: greeting }, { speaker: "ai", text: firstQuestion }]);
@@ -472,26 +595,50 @@ const InterviewContextProvider = ({ children }) => {
   };
 
   const stopVoiceInterview = () => {
+    // Stop speech synthesis
     window.speechSynthesis.cancel();
+    
+    // Stop speech recognition
     if (recognitionRef.current) {
-      recognitionRef.current.stop();
+      try {
+        recognitionRef.current.stop();
+      } catch (error) {
+        console.error("Error stopping speech recognition:", error);
+      }
+      recognitionRef.current = null;
     }
-    clearTimeout(silenceTimeoutRef.current);
-    clearTimeout(speechTimeoutRef.current);
+    
+    // Clear timeouts
+    if (silenceTimeoutRef.current) {
+      clearTimeout(silenceTimeoutRef.current);
+      silenceTimeoutRef.current = null;
+    }
+    if (speechTimeoutRef.current) {
+      clearTimeout(speechTimeoutRef.current);
+      speechTimeoutRef.current = null;
+    }
 
+    // Stop video stream
     if (userStream) {
-      userStream.getTracks().forEach((track) => track.stop());
+      userStream.getTracks().forEach((track) => {
+        track.stop();
+      });
       setUserStream(null);
     }
+    
+    // Reset all states
     setIsCameraOn(false);
-
     setIsInterviewing(false);
     setIsListening(false);
     setIsSpeaking(false);
     setIsPreparing(false);
+    setCountdown(5);
     
-    setInterviewComplete(true);
-    setResponse(Answers);
+    // Only complete the interview if we have answers
+    if (Answers.length > 0) {
+      setInterviewComplete(true);
+      setResponse(Answers);
+    }
   };
 
   return (
