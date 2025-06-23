@@ -108,13 +108,13 @@ const InterviewQuestions = () => {
         </div>
       </div>
       {/* Transcript Panel */}
-      <div className="w-full md:w-80 h-96 md:h-auto bg-gray-900/50 backdrop-blur-sm border border-gray-700 rounded-2xl p-6 flex flex-col">
+      <div className="w-full md:w-80 h-76 md:h-[500px] bg-gray-900/50 backdrop-blur-sm border border-gray-700 rounded-2xl p-6 flex flex-col">
         <h2 className="text-xl font-bold text-white mb-4 flex-shrink-0">Transcript</h2>
-         <div className="flex-grow overflow-y-auto custom-sidebar pr-2">
+         <div className="flex-1 overflow-y-auto custom-sidebar pr-2 min-h-0 ">
             {transcript.map((item, index) => (
               <div key={index} className={`my-3 ${item.speaker === 'user' ? 'text-right' : 'text-left'}`}>
                 <p className="font-bold text-sm mb-1">{item.speaker === "ai" ? "Nova" : "You"}</p>
-                <p className={`p-2 rounded-lg inline-block ${item.speaker === "ai" ? "bg-slate-700" : "bg-green-700"}`}>{item.text}</p>
+                <p className={`p-2 rounded-lg inline-block max-w-[85%] break-words ${item.speaker === "ai" ? "bg-slate-700" : "bg-green-700"}`}>{item.text}</p>
               </div>
             ))}
             <div ref={transcriptEndRef} />

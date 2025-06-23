@@ -209,6 +209,7 @@ const InterviewContextProvider = ({ children }) => {
   const silenceTimeoutRef = useRef(null);
   const recognitionRef = useRef(null);
   const currentQuestionIndexRef = useRef(0);
+  const isInterviewStoppedRef = useRef(false);
 
   useEffect(() => {
     if (response) {
@@ -318,6 +319,13 @@ const InterviewContextProvider = ({ children }) => {
 
   // Voice Interview Logic
   const speakText = (text, onEndCallback) => {
+    // Check if interview was stopped before speaking
+    if (isInterviewStoppedRef.current) {
+      console.log("Interview was stopped, not speaking text");
+      if (onEndCallback) onEndCallback();
+      return;
+    }
+
     if (!text) {
       if (onEndCallback) onEndCallback();
       return;
@@ -362,6 +370,12 @@ const InterviewContextProvider = ({ children }) => {
   };
 
   const startSpeechRecognition = () => {
+    // Check if interview was stopped
+    if (isInterviewStoppedRef.current) {
+      console.log("Interview was stopped, not starting speech recognition");
+      return;
+    }
+
     if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
       console.error("Speech recognition not supported");
       setError("Speech recognition is not supported in your browser. Please use Chrome or Edge.");
@@ -401,11 +415,19 @@ const InterviewContextProvider = ({ children }) => {
     }
 
     silenceTimeoutRef.current = setTimeout(() => {
+        // Check if interview was stopped before showing the message
+        if (isInterviewStoppedRef.current) {
+          console.log("Interview was stopped, not showing silence message");
+          return;
+        }
+        
         console.log("Silence timeout - no speech detected");
         recognition.stop();
         setIsListening(false);
         speakText("I didn't hear anything. Let me repeat the question.", () => {
-            speakText(currentQuestion, () => startSpeechRecognition());
+            if (!isInterviewStoppedRef.current) {
+              speakText(currentQuestion, () => startSpeechRecognition());
+            }
         });
     }, 10000);
 
@@ -424,15 +446,17 @@ const InterviewContextProvider = ({ children }) => {
         recognition.stop();
         setIsListening(false);
         const finalAnswer = combinedTranscript.trim();
-        if (finalAnswer) {
+        if (finalAnswer && !isInterviewStoppedRef.current) {
           console.log(`Processing answer for question ${currentIndex + 1}`);
           setTranscript((prev) => [...prev, { speaker: "user", text: finalAnswer }]);
           handleUserAnswer(finalAnswer, currentIndex);
-        } else {
+        } else if (!isInterviewStoppedRef.current) {
           // If no answer was captured, restart recognition
           console.log("No answer captured, restarting recognition");
           speakText("I didn't catch that. Could you please repeat your answer?", () => {
-            startSpeechRecognition();
+            if (!isInterviewStoppedRef.current) {
+              startSpeechRecognition();
+            }
           });
         }
       }, 3000);
@@ -445,7 +469,7 @@ const InterviewContextProvider = ({ children }) => {
       
       console.error("Speech recognition error:", event.error);
       
-      if (event.error !== "no-speech") {
+      if (event.error !== "no-speech" && !isInterviewStoppedRef.current) {
          speakText("I'm having trouble hearing. Let me repeat the question.", () => 
            speakText(currentQuestion, () => startSpeechRecognition())
          );
@@ -595,20 +619,25 @@ const InterviewContextProvider = ({ children }) => {
   };
 
   const stopVoiceInterview = () => {
-    // Stop speech synthesis
+    console.log("Stopping voice interview");
+    
+    // Set the stopped flag immediately to prevent any further speech recognition
+    isInterviewStoppedRef.current = true;
+    
+    // Stop speech synthesis immediately
     window.speechSynthesis.cancel();
     
-    // Stop speech recognition
+    // Stop speech recognition immediately
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
+        recognitionRef.current = null;
       } catch (error) {
         console.error("Error stopping speech recognition:", error);
       }
-      recognitionRef.current = null;
     }
     
-    // Clear timeouts
+    // Clear timeouts immediately to prevent "I didn't hear anything" message
     if (silenceTimeoutRef.current) {
       clearTimeout(silenceTimeoutRef.current);
       silenceTimeoutRef.current = null;
@@ -626,7 +655,7 @@ const InterviewContextProvider = ({ children }) => {
       setUserStream(null);
     }
     
-    // Reset all states
+    // Reset all states immediately
     setIsCameraOn(false);
     setIsInterviewing(false);
     setIsListening(false);
