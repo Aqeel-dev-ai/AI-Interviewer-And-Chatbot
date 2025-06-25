@@ -4,7 +4,6 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import Button from "./Button";
 import NavbarLinks from "./NavbarLinks";
 import { useAuth } from "../Context/AuthContext";
-import Sidebar from "./Sidebar";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
@@ -31,13 +30,6 @@ const Navbar = () => {
 
   return (
     <>
-      {URL.pathname == "/app" && (
-        <Sidebar
-          sidebarOpen={sidebarOpen}
-          setSidebarOpen={setSidebarOpen}
-          handleSidebarToggle={handleSidebarToggle}
-        />
-      )}
       <nav className="sticky bg-[#040E1A] border-b-2 border-gray-400 top-0 h-20 w-full flex items-center justify-between px-2 gap-10 lg:px-10  z-[1060] ">
         <div className="flex items-center justify-center gap-7">
           {URL.pathname == "/app" && (

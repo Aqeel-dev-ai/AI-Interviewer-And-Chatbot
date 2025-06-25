@@ -1,4 +1,4 @@
-import { ManageHistoryOutlined, CancelOutlined } from "@mui/icons-material";
+import { CancelOutlined } from "@mui/icons-material";
 import { useEffect, useState } from "react";
 import { useChatBotContext } from "../Context/ChatBotContext";
 import Loader from "./Loader";
@@ -22,11 +22,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, handleSidebarToggle }) => {
   const handleHistory = (id) => {
     fetchChatSession(id);
     setIsChat(true);
-    setSidebarOpen(!sidebarOpen);
   };
 
   const handleInterviewHistory = (id, result) => {
-    setSidebarOpen(!sidebarOpen);
     setIsChat(true);
     setSelectedResult(result);
   };
@@ -58,90 +56,57 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, handleSidebarToggle }) => {
 
   return (
     <>
-      <ManageHistoryOutlined
-        sx={{
-          fontSize: { xs: 30, lg: 35 },
-          cursor: "pointer",
-          transition: "transform 0.2s ease-in-out",
-          "&:hover": { transform: "scale(1.1)" },
-        }}
-        className="absolute top-6 left-5 z-[1060] "
-        onClick={handleSidebarToggle}
-      />
       <div
-        className={`h-screen w-full shadow-2xl shadow-black lg:w-[400px] bg-[#081229]  rounded-lg absolute z-[1061] py-3 transition-all duration-300 ease-in-out top-0 ${
+        className={`pointer-events-auto h-screen w-full shadow-2xl shadow-black lg:w-[420px] bg-[#081229] rounded-lg absolute z-[1061] py-3 transition-all duration-300 ease-in-out top-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
+        style={{ left: 0 }}
       >
-        {/* Chat History Section */}
-        <div className="w-full h-[50%] flex flex-col pl-5">
-          <div className="w-full flex justify-between items-center">
-            <h1 className="lg:text-2xl text-xl font-bold text-slate-100">
-              Chat History
-            </h1>
+        {/* Logo and App Name */}
+        <div className="flex flex-col gap-2 px-4 pb-2 border-b border-[#232b47] mb-2">
+          <div className="flex items-center gap-2">
+            <img src="/assets/Logo.webp" alt="Nova Logo" className="h-8 w-8 rounded-full object-cover" />
+            <span className="text-lg font-bold text-white tracking-wide truncate">NOVA Chatbot</span>
+            <span className="flex-1" />
             <CancelOutlined
               sx={{
-                fontSize: { xs: 30, lg: 35 },
+                fontSize: 24,
                 cursor: "pointer",
                 transition: "transform 0.2s ease-in-out",
                 "&:hover": { transform: "scale(1.09)" },
               }}
-              onClick={handleSidebarToggle}
+              onClick={() => setSidebarOpen(false)}
             />
           </div>
-          <div className="w-full h-full overflow-y-auto my-4 custom-sidebar">
+          {/* New Chat Button (adjusted size) */}
+          <button
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg text-base transition-colors mt-2"
+            onClick={() => {
+              setIsChat(false);
+              setSelectedResult(null);
+            }}
+          >
+            + New chat
+          </button>
+        </div>
+        {/* Chat History Section */}
+        <div className="w-full flex-1 flex flex-col pl-3 pr-2 overflow-y-auto custom-sidebar">
+          <h1 className="text-lg font-bold text-slate-100 mb-2">Chat History</h1>
+          <div className="flex-1 overflow-y-auto">
             {history.length > 0 ? (
               history.map((session) => (
                 <div
-                  className="w-full hover:cursor-pointer hover:bg-[#18274a]  mb-3 rounded-lg py-1 px-2  flex items-center justify-between"
+                  className="w-full hover:cursor-pointer hover:bg-[#18274a] mb-2 rounded-lg py-1 px-2 flex items-center truncate"
                   key={session.id}
                   onClick={() => handleHistory(session.id)}
                 >
-                  <p className="lg:text-xl font-medium">
-                    {session.messages[0]?.Prompt.slice(0, 15)}...
-                  </p>
-                  <p>
-                    {new Date(
-                      session.timestamp.seconds * 1000
-                    ).toLocaleDateString()}
+                  <p className="text-base font-medium truncate">
+                    {session.messages[0]?.Prompt.slice(0, 20)}...
                   </p>
                 </div>
               ))
             ) : (
-              <div className="h-full w-full flex items-center justify-center text-xl font-semibold flex-col gap-7">
-                {fetchedHistory ? <Loader /> : "No History Available Yet."}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Interview History Section */}
-        <div className="w-full h-[50%] flex flex-col pl-5">
-          <h1 className="lg:text-2xl text-xl font-bold text-slate-100">
-            Interview History
-          </h1>
-          <div className="w-full h-full overflow-y-auto my-4 custom-sidebar">
-            {Interviews.length > 0 ? (
-              Interviews.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="w-full hover:cursor-pointer hover:bg-[#18274a] mb-3 rounded-lg py-1 px-2 flex items-center justify-between"
-                  onClick={() => handleInterviewHistory(doc.id, doc.Result)}
-                >
-                  <p className=" md:text-lg  xl:text-xl font-medium">
-                    {doc.jobTitle || "No JobTitle available"}
-                  </p>
-                  <p>
-                    {doc.timestamp
-                      ? new Date(
-                          doc.timestamp.seconds * 1000
-                        ).toLocaleDateString()
-                      : "No Date Available"}
-                  </p>
-                </div>
-              ))
-            ) : (
-              <div className="h-full w-full flex items-center justify-center text-xl font-semibold flex-col gap-7">
+              <div className="h-full w-full flex items-center justify-center text-base font-semibold flex-col gap-5">
                 {fetchedHistory ? <Loader /> : "No History Available Yet."}
               </div>
             )}
