@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import {
   createUserWithEmailAndPassword,
@@ -43,7 +42,7 @@ const AuthContext = createContext({
 export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [fetchedUser, FetchingUser] = useState(true);
+  const [fetchedUser, setFetchedUser] = useState(false);
   const [User, setUser] = useState(null);
 
   const toastObj = {
@@ -75,15 +74,11 @@ export const AuthProvider = ({ children }) => {
   const LoginPasswordRef = useRef();
 
   useEffect(() => {
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        FetchingUser(false);
-        setUser(user);
-      } else {
-        FetchingUser(false);
-        setUser(null);
-      }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user || null);
+      setFetchedUser(true);
     });
+    return () => unsubscribe();
   }, []);
 
   const formValidation = (email, password, name = null) => {
@@ -247,10 +242,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = (navigate) => {
     signOut(auth)
       .then(() => {
         toast.success("Signout Succesfully", toastObj);
+        if (navigate) navigate("/");
       })
       .catch((error) => {
         setError(error.code);

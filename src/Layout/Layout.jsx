@@ -1,10 +1,13 @@
 import Navbar from "../Components/Navbar";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 
 const Layout = () => {
+  const location = useLocation();
+  // Hide Navbar on landing page
+  const hideNavbar = location.pathname === "/";
   return (
     <>
-      <Navbar />
+      {!hideNavbar && <Navbar />}
       <Outlet />
     </>
   );

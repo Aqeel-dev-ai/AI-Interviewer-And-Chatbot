@@ -1,5 +1,5 @@
 import { createBrowserRouter, RouterProvider, Outlet } from "react-router-dom";
-import { AuthProvider } from "../Context/AuthContext";
+import { AuthProvider, useAuth } from "../Context/AuthContext";
 import Layout from "../Layout/Layout";
 import Hero from "../Pages/Hero";
 import Signup from "../Pages/Signup";
@@ -12,12 +12,27 @@ import ChatBot from "../Pages/ChatBot";
 import InterviewQuestions from "../Pages/InterviewQuestions";
 import NotFound from "../Components/NotFound";
 import About from "../Pages/About";
+import ContactUs from "../Pages/ContactUs";
+import Landing from "../Pages/Landing";
+import Loader from "../Components/Loader";
 
 const AppLayout = () => (
   <Layout>
     <Outlet />
   </Layout>
 );
+
+function HomeRoute() {
+  const { User, fetchedUser } = useAuth();
+  if (!fetchedUser) return <div className="text-white text-center py-20">Loading...</div>;
+  return <Landing />;
+}
+
+function ProtectedHome() {
+  const { User, fetchedUser } = useAuth();
+  if (!fetchedUser) return <div className="text-white text-center py-20">Loading...</div>;
+  return User ? <Hero /> : <Landing />;
+}
 
 const router = createBrowserRouter([
   {
@@ -26,7 +41,11 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Hero />,
+        element: <HomeRoute />,
+      },
+      {
+        path: "home",
+        element: <ProtectedHome />,
       },
       {
         path: "app",
@@ -61,6 +80,10 @@ const router = createBrowserRouter([
       {
         path: "about",
         element: <About />,
+      },
+      {
+        path: "contact",
+        element: <ContactUs />,
       },
     ],
   },

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { MenuRounded, ManageHistoryOutlined } from "@mui/icons-material";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import Button from "./Button";
 import NavbarLinks from "./NavbarLinks";
 import { useAuth } from "../Context/AuthContext";
@@ -11,6 +11,7 @@ const Navbar = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { User, handleLogout } = useAuth();
   const URL = useLocation();
+  const navigate = useNavigate();
 
   const handleToggle = () => {
     setOpen(!open);
@@ -23,6 +24,10 @@ const Navbar = () => {
   useEffect(() => {
     setOpen(false);
   }, []);
+
+  const handleLogoutClick = () => {
+    handleLogout(navigate);
+  };
 
   return (
     <>
@@ -68,7 +73,7 @@ const Navbar = () => {
         {User ? (
           <Button
             text={"Logout"}
-            Click={handleLogout}
+            Click={handleLogoutClick}
             Class={"hidden lg:flex !text-white"}
           />
         ) : (

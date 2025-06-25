@@ -1,15 +1,21 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../Context/AuthContext";
 import Button from "./Button";
 
 const NavbarLinks = ({ state }) => {
   const { User, handleLogout } = useAuth();
+  const navigate = useNavigate();
   const pages = [
-    { Page: "Home", Path: "/" },
+    { Page: "Home", Path: "/home" },
     { Page: "ChatBot", Path: "/app" },
     { Page: "Interview Form", Path: "/interview-form" },
     { Page: "About", Path: "/about" },
+    { Page: "Contact Us", Path: "/contact" },
   ];
+
+  const handleLogoutClick = () => {
+    handleLogout(navigate);
+  };
 
   return (
     <>
@@ -32,7 +38,7 @@ const NavbarLinks = ({ state }) => {
           );
         })}
         {User ? (
-          <Button text={"Logout"} Click={handleLogout} Class="!text-white" />
+          <Button text={"Logout"} Click={handleLogoutClick} Class="!text-white" />
         ) : (
           <NavLink to="/login">
             <Button text={"Get Started"} Class="!text-white" />
