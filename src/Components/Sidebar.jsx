@@ -57,7 +57,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, handleSidebarToggle }) => {
   return (
     <>
       <div
-        className={`pointer-events-auto h-screen w-full shadow-2xl shadow-black lg:w-[420px] bg-[#081229] rounded-lg absolute z-[1061] py-3 transition-all duration-300 ease-in-out top-0 ${
+        className={`pointer-events-auto h-screen w-[225px] shadow-2xl shadow-black bg-[#081229] rounded-lg absolute z-[1061] py-3 transition-all duration-300 ease-in-out top-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
         style={{ left: 0 }}
@@ -78,15 +78,15 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, handleSidebarToggle }) => {
               onClick={() => setSidebarOpen(false)}
             />
           </div>
-          {/* New Chat Button (adjusted size) */}
+          {/* New Chat Button (adjusted size for sidebar width) */}
           <button
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg text-base transition-colors mt-2"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-3 rounded-lg text-sm transition-colors mt-2 flex items-center justify-center"
             onClick={() => {
               setIsChat(false);
               setSelectedResult(null);
             }}
           >
-            + New chat
+            <span className="truncate">+ New chat</span>
           </button>
         </div>
         {/* Chat History Section */}

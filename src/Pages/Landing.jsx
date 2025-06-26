@@ -122,9 +122,6 @@ const Landing = () => {
               <FcGoogle className="text-2xl" />
               {loading ? <span>Signing in...</span> : <span>Sign in with Google</span>}
             </button>
-            <button className="flex items-center gap-3 bg-[#232b47] text-white font-semibold rounded-full px-6 py-3 shadow hover:bg-[#10192b] transition-all text-lg" style={{minWidth:220}}>
-              <FaGithub className="text-2xl" /> Sign in with GitHub
-            </button>
           </div>
         </div>
       </section>

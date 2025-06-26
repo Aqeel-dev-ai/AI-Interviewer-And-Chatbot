@@ -6,6 +6,7 @@ import {
 } from "@mui/icons-material";
 import { useChatBotContext } from "../Context/ChatBotContext";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
+import { useState } from "react";
 
 const ChatForm = () => {
   const {
@@ -18,7 +19,10 @@ const ChatForm = () => {
     handleStop,
     showPauseIcon,
     setVoiceChat,
+    setCurrentMsg,
   } = useChatBotContext();
+
+  const [listening, setListening] = useState(false);
 
   // Placeholder file input handler
   const handleFileChange = (e) => {
@@ -29,12 +33,31 @@ const ChatForm = () => {
     }
   };
 
-  // Placeholder for speech-to-text (Web Speech API)
+  // Speech-to-Text (Web Speech API)
   const handleSpeechToText = () => {
-    // Placeholder: simulate speech-to-text and set input
-    // In real use, use Web Speech API and setCurrentMsg(transcript)
-    console.log("Speech-to-text triggered");
-    // Example: setCurrentMsg("Simulated voice input");
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      alert('Speech recognition is not supported in this browser.');
+      return;
+    }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    setListening(true);
+    recognition.start();
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setCurrentMsg(transcript);
+      setListening(false);
+    };
+    recognition.onerror = (event) => {
+      setListening(false);
+      alert('Speech recognition error: ' + event.error);
+    };
+    recognition.onend = () => {
+      setListening(false);
+    };
   };
 
   return (
@@ -44,17 +67,7 @@ const ChatForm = () => {
         className="w-full h-full flex items-center justify-center"
       >
         <div className="flex items-center justify-center lg:w-[80%] w-full gap-2 lg:gap-1">
-          {/* Add Files Button */}
-          <label className="flex items-center cursor-pointer px-2 py-1 rounded-lg hover:bg-[#232b47] transition-colors" title="Add files">
-            <AttachFileIcon className="text-blue-400" />
-            <input
-              type="file"
-              accept=".pdf,.doc,.docx,image/*"
-              multiple
-              className="hidden"
-              onChange={handleFileChange}
-            />
-          </label>
+          {/* File Upload Button removed */}
           <div className="relative w-full flex items-center">
             <input
               value={currentMsg}
@@ -65,15 +78,6 @@ const ChatForm = () => {
               placeholder="Enter your Prompt here."
               onChange={handleInput}
             />
-            {/* Speech-to-Text Microphone Icon (writes to input) */}
-            <button
-              type="button"
-              className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-full bg-[#232b47] hover:bg-blue-700 p-2 transition-colors"
-              title="Speech to text"
-              onClick={handleSpeechToText}
-            >
-              <KeyboardVoiceRounded className="text-blue-400" sx={{ fontSize: 24 }} />
-            </button>
           </div>
           {/* Existing Voice Chat Button (setVoiceChat) */}
           <KeyboardVoiceRounded
