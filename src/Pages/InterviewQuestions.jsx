@@ -124,7 +124,7 @@ const InterviewQuestions = () => {
   )
 
   return (
-    <div className="h-[calc(100dvh-80px)] w-full flex flex-col items-center justify-between p-8 bg-black text-white relative overflow-hidden">
+    <div className="h-[calc(100vh-80px)] w-full flex flex-col bg-black text-white relative overflow-hidden">
        {/* Background Decoration */}
       <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-br from-blue-900/50 via-black to-black opacity-50 blur-3xl"></div>
       <div className="absolute bottom-0 right-0 w-1/2 h-full bg-gradient-to-tl from-pink-900/50 via-black to-black opacity-50 blur-3xl"></div>
@@ -138,11 +138,11 @@ const InterviewQuestions = () => {
         </div>
       ) : null}
       
-      <div className="w-full max-w-7xl flex flex-col md:flex-row items-center md:items-stretch gap-8 z-10 flex-grow">
+      <div className="flex-1 w-full max-w-7xl mx-auto flex flex-col md:flex-row items-center md:items-stretch gap-8 z-10 p-8">
           {isInterviewing ? InterviewingUI : PreInterviewUI}
       </div>
 
-      <div className="w-full flex items-center justify-center pt-8 z-10">
+      <div className="w-full flex items-center justify-center p-8 z-10">
         {isInterviewing ? (
              <Button Click={stopVoiceInterview} text="End Interview" Class="!bg-red-600 !border-red-600" />
         ) : (
