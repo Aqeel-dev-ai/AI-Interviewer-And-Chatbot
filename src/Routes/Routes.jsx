@@ -15,6 +15,7 @@ import About from "../Pages/About";
 import ContactUs from "../Pages/ContactUs";
 import Landing from "../Pages/Landing";
 import Loader from "../Components/Loader";
+import Result from "../Components/Result";
 
 const AppLayout = () => (
   <Layout>
@@ -74,6 +75,14 @@ const router = createBrowserRouter([
             <InterviewContextProvider>
               <InterviewQuestions />
             </InterviewContextProvider>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "result",
+        element: (
+          <ProtectedRoute>
+            <Result />
           </ProtectedRoute>
         ),
       },

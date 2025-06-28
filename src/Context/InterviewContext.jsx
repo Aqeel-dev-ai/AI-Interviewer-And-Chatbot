@@ -213,20 +213,39 @@ const InterviewContextProvider = ({ children }) => {
 
   useEffect(() => {
     if (response) {
+      console.log("Response received, saving to Firebase:", response);
+      console.log("Current analysis results:", analysisResults);
+      console.log("Job title:", jobTitle);
+      console.log("User ID:", User.uid);
+      
       addDoc(collection(db, "Interview"), {
         Result: response,
         timestamp: serverTimestamp(),
         UserId: User.uid,
         jobTitle,
       })
-        .then(() => {
+        .then((docRef) => {
+          console.log("Interview saved successfully with ID:", docRef.id);
           setQuestions([]);
           setBtnDisable(false);
           setJobTitle(null);
           setInterviewComplete(true);
           setUserDetail(null);
+          
+          // Navigate to Result page with the interview data
+          const percentage = calculatePercentage(response);
+          console.log("Calculated percentage:", percentage);
+          navigate("/result", {
+            state: {
+              percentage: percentage,
+              questionsAndAnswers: response,
+              jobTitle: jobTitle,
+              fromInterview: true
+            }
+          });
         })
         .catch((error) => {
+          console.error("Error saving interview:", error);
           setBtnDisable(false);
           setError(error.code || error.message);
         });
@@ -539,10 +558,16 @@ const InterviewContextProvider = ({ children }) => {
       const endMessage = "Thank you. Your interview is now complete. We are generating your results.";
       setTranscript((prev) => [...prev, { speaker: "ai", text: endMessage }]);
       speakText(endMessage, () => {
-        // Stop the interview and set the response
+        // Stop the interview and wait for analysis to complete
         stopVoiceInterview();
         setInterviewComplete(true);
-        setResponse(Answers); 
+        
+        // Wait a bit for any pending analysis to complete, then set response
+        setTimeout(() => {
+          console.log("Setting response with answers:", Answers);
+          console.log("Analysis results:", analysisResults);
+          setResponse(Answers);
+        }, 2000); // Wait 2 seconds for analysis to complete
       });
     } else {
       const nextIndex = currentIndex + 1;
@@ -668,6 +693,31 @@ const InterviewContextProvider = ({ children }) => {
       setInterviewComplete(true);
       setResponse(Answers);
     }
+  };
+
+  // Helper function to calculate percentage based on analysis results
+  const calculatePercentage = (answers) => {
+    if (!answers || answers.length === 0) return 0;
+    
+    // If we have analysis results, use them to calculate score
+    if (analysisResults.length > 0) {
+      const totalPoints = analysisResults.reduce((sum, result) => {
+        // Parse the analysis text to extract rating
+        const analysisText = result.analysis || '';
+        const ratingMatch = analysisText.match(/Rating:\s*(\d+)\/10/);
+        const score = ratingMatch ? parseInt(ratingMatch[1]) : 7; // Default to 7 if no rating found
+        console.log(`Question: ${result.question}, Score: ${score}/10`);
+        return sum + score;
+      }, 0);
+      
+      const totalPossiblePoints = analysisResults.length * 10; // 10 points per question
+      const percentage = Math.round((totalPoints / totalPossiblePoints) * 100);
+      console.log(`Total Points: ${totalPoints}, Total Possible: ${totalPossiblePoints}, Percentage: ${percentage}%`);
+      return percentage;
+    }
+    
+    // Default percentage based on number of questions answered
+    return Math.round((answers.length / 5) * 80); // Assuming 5 questions, 80% base score
   };
 
   return (

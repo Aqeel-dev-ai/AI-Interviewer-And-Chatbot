@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import TagInput from "../Components/TagInput.jsx";
 import { useInterviewContext } from "../Context/InterviewContext";
 import { useAuth } from "../Context/AuthContext";
 import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
 import { db } from "../utilities/firebase";
 
-const InterviewHistorySidebar = () => {
+const InterviewHistorySidebar = ({ onInterviewSelect }) => {
   const { User } = useAuth();
   const [interviews, setInterviews] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,6 +36,10 @@ const InterviewHistorySidebar = () => {
     fetchInterview();
   }, [User]);
 
+  const handleInterviewClick = (interview) => {
+    onInterviewSelect(interview);
+  };
+
   return (
     <div className="fixed top-[80px] left-0 h-[calc(100vh-80px)] w-[340px] z-30 bg-[#081229] border-r border-[#232b47] flex flex-col">
       <div className="p-4 border-b border-[#232b47]">
@@ -47,7 +52,11 @@ const InterviewHistorySidebar = () => {
           <div className="text-gray-400 text-center mt-4">No Interview History</div>
         ) : (
           interviews.map((item) => (
-            <div key={item.id} className="mb-3 p-2 rounded bg-[#10192b] text-white">
+            <div 
+              key={item.id} 
+              className="mb-3 p-2 rounded bg-[#10192b] text-white cursor-pointer hover:bg-[#1a2332] transition-colors"
+              onClick={() => handleInterviewClick(item)}
+            >
               <div className="font-semibold">{item.jobTitle || "Untitled"}</div>
               <div className="text-xs text-gray-400">{item.timestamp?.toDate?.().toLocaleString?.() || ""}</div>
               <div className="text-sm mt-1">{item.Result ? `Result: ${item.Result.length} answers` : "No result"}</div>
@@ -60,6 +69,7 @@ const InterviewHistorySidebar = () => {
 };
 
 const InterviewForm = () => {
+  const navigate = useNavigate();
   const {
     industriesAndJobs,
     handleIndustryChange,
@@ -76,6 +86,16 @@ const InterviewForm = () => {
   const [isParsing, setIsParsing] = useState(false);
   const [fileName, setFileName] = useState("");
   const [parseError, setParseError] = useState("");
+
+  const handleInterviewSelect = (interview) => {
+    // Navigate to Result page with interview data
+    navigate('/result', { 
+      state: { 
+        interviewData: interview,
+        fromHistory: true 
+      } 
+    });
+  };
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -354,7 +374,7 @@ const InterviewForm = () => {
   return (
     <div className="min-h-[100dvh] w-full flex items-center justify-center px-2">
       {/* Interview History Sidebar */}
-      <InterviewHistorySidebar />
+      <InterviewHistorySidebar onInterviewSelect={handleInterviewSelect} />
       {/* Main Content with left margin for sidebar */}
       <div className="w-full max-w-[900px] bg-[#040E1A] rounded-xl shadow-lg shadow-blue-300 flex flex-col py-6 h-full" style={{ marginLeft: '340px' }}>
         <div className="flex-1 flex flex-col justify-between w-full gap-7 px-1">
