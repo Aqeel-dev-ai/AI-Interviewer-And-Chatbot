@@ -39,8 +39,19 @@ const ChatBot = () => {
 
       {/* Main Content */}
       <div className="flex flex-col flex-1 h-full" style={{ marginLeft: `${SIDEBAR_WIDTH}px` }}>
-        {/* Chat Section */}
-        <div className="flex-1 overflow-y-auto px-2 py-4 scroll-smooth chat-Div pb-[90px]">
+        {/* Chat Message Section - fixed area between navbar and chat input */}
+        <div
+          className="absolute"
+          style={{
+            top: `${NAVBAR_HEIGHT}px`,
+            left: `${SIDEBAR_WIDTH}px`,
+            right: 0,
+            bottom: '90px',
+            overflowY: 'auto',
+            padding: '16px 8px',
+            scrollBehavior: 'smooth',
+          }}
+        >
           {voiceChat ? (
             <VoiceChat />
           ) : !isChat ? (
