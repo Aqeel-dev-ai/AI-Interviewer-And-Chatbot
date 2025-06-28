@@ -14,6 +14,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, handleSidebarToggle }) => {
     setIsChat,
     fetchedHistory,
     setSelectedResult,
+    startNewChat,
   } = useChatBotContext();
   const { User, setError } = useAuth();
 
@@ -63,9 +64,8 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, handleSidebarToggle }) => {
         style={{ left: 0 }}
       >
         {/* Logo and App Name */}
-        <div className="flex flex-col gap-2 px-4 pb-2 border-b border-[#232b47] mb-2">
+        <div className="sticky top-0 z-10 bg-[#081229] flex flex-col gap-2 px-4 pb-2 border-b border-[#232b47]">
           <div className="flex items-center gap-2">
-            <img src="/assets/Logo.webp" alt="Nova Logo" className="h-8 w-8 rounded-full object-cover" />
             <span className="text-lg font-bold text-white tracking-wide truncate">NOVA Chatbot</span>
             <span className="flex-1" />
             <CancelOutlined
@@ -81,10 +81,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, handleSidebarToggle }) => {
           {/* New Chat Button (adjusted size for sidebar width) */}
           <button
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-3 rounded-lg text-sm transition-colors mt-2 flex items-center justify-center"
-            onClick={() => {
-              setIsChat(false);
-              setSelectedResult(null);
-            }}
+            onClick={startNewChat}
           >
             <span className="truncate">+ New chat</span>
           </button>
