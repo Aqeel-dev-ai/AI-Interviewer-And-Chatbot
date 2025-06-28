@@ -25,10 +25,10 @@ const ChatBot = () => {
   }, []);
 
   return (
-    <div className="flex h-screen bg-[#040E1A] text-white overflow-hidden">
+    <div className="flex bg-[#040E1A] text-white overflow-hidden h-full">
       {/* Sidebar */}
       <div
-        className="flex flex-col bg-[#081229] border-r border-[#232b47] w-[240px] h-[calc(100vh-80px)] z-30 overflow-y-auto overflow-x-hidden fixed top-[80px] left-0"
+        className="flex flex-col bg-[#081229] border-r border-[#232b47] w-[240px] h-full z-30 overflow-y-auto overflow-x-hidden fixed top-[80px] left-0"
       >
         <div className="flex items-center justify-between p-4 border-b border-[#232b47]">
           <img src="/assets/Logo.webp" alt="Logo" className="h-8 w-8" />
@@ -38,9 +38,9 @@ const ChatBot = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-col flex-1 h-[calc(100vh-80px)]" style={{ marginLeft: `${SIDEBAR_WIDTH}px` }}>
+      <div className="flex flex-col flex-1 h-full" style={{ marginLeft: `${SIDEBAR_WIDTH}px` }}>
         {/* Chat Section */}
-        <div className="flex-1 overflow-y-auto px-2 py-4 scroll-smooth chat-Div">
+        <div className="flex-1 overflow-y-auto px-2 py-4 scroll-smooth chat-Div pb-[90px]">
           {voiceChat ? (
             <VoiceChat />
           ) : !isChat ? (
@@ -55,9 +55,14 @@ const ChatBot = () => {
           )}
           <div ref={chatEndRef}></div>
         </div>
+      </div>
 
-        {/* Chat Input */}
-        <div className="h-[90px] flex-shrink-0 border-t border-[#232b47] bg-[#081229] w-full">
+      {/* Chat Input - fixed at bottom, right of sidebar */}
+      <div
+        className="fixed bottom-0 left-[240px] z-40 w-[calc(100vw-240px)] border-t border-[#232b47] bg-[#081229] shadow-lg flex items-center justify-center"
+        style={{ height: '90px' }}
+      >
+        <div className="w-full max-w-5xl mx-auto flex items-center justify-center h-full">
           <ChatForm />
         </div>
       </div>
