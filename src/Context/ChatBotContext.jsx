@@ -14,7 +14,7 @@ import {
   orderBy,
 } from "firebase/firestore";
 import { useAuth } from "./AuthContext";
-import { groq } from "../utilities/Groq";
+import { GeminiApiCall } from "../utilities/Gemini";
 import { VoiceChat } from "@mui/icons-material";
 
 const ChatBotContext = createContext({
@@ -240,55 +240,8 @@ export const ChatBotContextProvider = ({ children }) => {
     let responseText;
     try {
       const ChatHistory = findChats();
-      if (ChatHistory.length < 1) {
-        const response = await groq.post("/chat/completions", {
-          model: "llama3-70b-8192",
-          messages: [
-            {
-              role: "system",
-              content: "You are a helpful AI assistant that provides clear and concise responses."
-            },
-            {
-              role: "user",
-              content: UserInput
-            }
-          ],
-          temperature: 0.7,
-          max_tokens: 1024,
-          top_p: 1,
-          frequency_penalty: 0,
-          presence_penalty: 0
-        });
-        responseText = response.data.choices[0].message.content;
-      } else if (ChatHistory.length >= 1) {
-        const messages = [
-          ...ChatHistory.map(msg => ({ role: "user", content: msg.text })),
-          { role: "user", content: UserInput }
-        ];
-        const response = await groq.post("/chat/completions", {
-          model: "llama3-70b-8192",
-          messages: [
-            {
-              role: "system",
-              content: "You are a helpful AI assistant that provides clear and concise responses."
-            },
-            ...ChatHistory.map((chat) => ({
-              role: "user",
-              content: chat.text
-            })),
-            {
-              role: "user",
-              content: UserInput
-            }
-          ],
-          temperature: 0.7,
-          max_tokens: 1024,
-          top_p: 1,
-          frequency_penalty: 0,
-          presence_penalty: 0
-        });
-        responseText = response.data.choices[0].message.content;
-      }
+      // For now, let's test without history
+      responseText = await GeminiApiCall(UserInput);
       await saveUserChat({
         Prompt: UserInput,
         Response: responseText,
@@ -329,30 +282,7 @@ export const ChatBotContextProvider = ({ children }) => {
         return;
       }
       try {
-        const response = await groq.post("/chat/completions", {
-          model: "llama3-70b-8192",
-          messages: [
-            {
-              role: "system",
-              content: "You are a helpful AI assistant that provides clear and concise responses."
-            },
-            {
-              role: "user",
-              content: spokenText
-            }
-          ],
-          temperature: 0.7,
-          max_tokens: 1024,
-          top_p: 1,
-          frequency_penalty: 0,
-          presence_penalty: 0
-        });
-
-        if (!response.data?.choices?.[0]?.message?.content) {
-          throw new Error("No response from the API");
-        }
-
-        const responseText = response.data.choices[0].message.content;
+        const responseText = await GeminiApiCall(spokenText);
         speakText(responseText);
         setDisable(false);
       } catch (error) {

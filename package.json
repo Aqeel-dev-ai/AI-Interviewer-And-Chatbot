@@ -1,5 +1,5 @@
 {
-  "name": "Ai-Interviewer-and-ChatBot",
+  "name": "Nova-Interviewer-and-ChatBot",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -13,10 +13,12 @@
     "@emailjs/browser": "^4.4.1",
     "@emotion/react": "^11.11.3",
     "@emotion/styled": "^11.11.0",
+    "@google/generative-ai": "^0.24.1",
     "@mui/icons-material": "^5.15.10",
     "@mui/material": "^5.15.10",
     "axios": "^1.10.0",
     "firebase": "^11.9.1",
+    "highlight.js": "^11.11.1",
     "pdfjs-dist": "^5.3.31",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -26,6 +28,8 @@
     "react-router-dom": "^6.22.1",
     "react-toastify": "^11.0.5",
     "rehype-highlight": "^7.0.2",
+    "rehype-raw": "^7.0.0",
+    "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
