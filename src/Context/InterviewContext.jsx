@@ -213,10 +213,15 @@ const InterviewContextProvider = ({ children }) => {
   const currentQuestionIndexRef = useRef(0);
   const isInterviewStoppedRef = useRef(false);
   const interviewStartTimeRef = useRef(null);
+  const answersRef = useRef([]);
+
+  useEffect(() => {
+    answersRef.current = Answers;
+  }, [Answers]);
 
   useEffect(() => {
     if (response) {
-      console.log("Response received, saving to Firebase:", response);
+      console.log("[LOG] useEffect: Response received, saving to Firebase:", response);
       console.log("Current analysis results:", analysisResults);
       console.log("Job title:", jobTitle);
       console.log("User ID:", User.uid);
@@ -244,6 +249,7 @@ const InterviewContextProvider = ({ children }) => {
         };
       });
       
+      console.log("[LOG] useEffect: Enriched response to be saved (should be full array):", enrichedResponse);
       addDoc(collection(db, "Interview"), {
         Result: enrichedResponse,
         timestamp: serverTimestamp(),
@@ -550,27 +556,25 @@ const InterviewContextProvider = ({ children }) => {
 
   const handleUserAnswer = async (answer, questionIndex) => {
     const currentQuestion = questions[questionIndex];
-    
     console.log(`handleUserAnswer called for question ${questionIndex + 1}: ${currentQuestion}`);
     console.log(`Answer received: ${answer}`);
-    
     if (answer.length < 10) {
-       console.log("Answer too short, asking for more detail");
-       speakText("Could you please provide a more detailed answer?", () => {
-           speakText(currentQuestion, () => startSpeechRecognition());
-       });
-       return;
+      console.log("Answer too short, asking for more detail");
+      speakText("Could you please provide a more detailed answer?", () => {
+        speakText(currentQuestion, () => startSpeechRecognition());
+      });
+      return;
     }
-
     console.log("Processing valid answer");
-    const newAnswers = [...Answers, { question: currentQuestion, answer }];
-    setAnswers(newAnswers);
-
+    // Use functional update to always append, never overwrite
+    setAnswers(prevAnswers => {
+      const updatedAnswers = [...prevAnswers, { question: currentQuestion, answer }];
+      console.log("[LOG] Answers after setAnswers (functional):", updatedAnswers);
+      return updatedAnswers;
+    });
     try {
       const jobDescription = `Job Title: ${jobTitle}\nExperience: ${userdetail.Experience || userdetail.experience}\nSkills: ${userdetail.skills.join(", ")}`;
       const analysis = await analyzeAnswer(currentQuestion, answer, jobDescription);
-      
-      // Store the analysis result
       setAnalysisResults(prev => [...prev, {
         question: currentQuestion,
         answer,
@@ -579,15 +583,14 @@ const InterviewContextProvider = ({ children }) => {
       console.log("Answer analysis completed");
     } catch (error) {
       console.error("Error analyzing answer:", error);
-      // Continue with the interview even if analysis fails
     }
-
     console.log("Calling moveToNextQuestion");
     moveToNextQuestion(questionIndex);
   };
   
   const moveToNextQuestion = (currentIndex) => {
     console.log(`moveToNextQuestion called. Current index: ${currentIndex}, Total questions in pool: ${questions.length}`);
+    console.log("[LOG] Current Answers in moveToNextQuestion:", Answers);
     
     // Check if interview time has elapsed
     const elapsedMinutes = (Date.now() - interviewStartTimeRef.current) / (1000 * 60);
@@ -607,9 +610,9 @@ const InterviewContextProvider = ({ children }) => {
         
         // Wait a bit for any pending analysis to complete, then set response
         setTimeout(() => {
-          console.log("Setting response with answers:", Answers);
-          console.log("Analysis results:", analysisResults);
-          setResponse(Answers);
+          console.log("[LOG] Setting response with answers (answersRef):", answersRef.current);
+          console.log("[LOG] Setting response with answers (Answers):", Answers);
+          setResponse(answersRef.current);
         }, 2000); // Wait 2 seconds for analysis to complete
       });
     } else {
@@ -626,9 +629,9 @@ const InterviewContextProvider = ({ children }) => {
           stopVoiceInterview();
           setInterviewComplete(true);
           setTimeout(() => {
-            console.log("Setting response with answers:", Answers);
-            console.log("Analysis results:", analysisResults);
-            setResponse(Answers);
+            console.log("[LOG] Setting response with answers (answersRef):", answersRef.current);
+            console.log("[LOG] Setting response with answers (Answers):", Answers);
+            setResponse(answersRef.current);
           }, 2000);
         });
         return;
@@ -669,7 +672,6 @@ const InterviewContextProvider = ({ children }) => {
 
     setIndex(0);
     currentQuestionIndexRef.current = 0; // Initialize the ref
-    setAnswers([]);
     interviewStartTimeRef.current = Date.now(); // Record start time
     
     setTranscript([{ speaker: "ai", text: greeting }, { speaker: "ai", text: firstQuestion }]);
@@ -754,8 +756,9 @@ const InterviewContextProvider = ({ children }) => {
     
     // Only complete the interview if we have answers
     if (Answers.length > 0) {
+      console.log("[LOG] stopVoiceInterview: Answers before setResponse:", Answers);
       setInterviewComplete(true);
-      setResponse(Answers);
+      setResponse(answersRef.current);
     }
   };
 

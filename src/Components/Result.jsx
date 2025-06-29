@@ -1,12 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Button from "./Button";
 import { Link, useLocation } from "react-router-dom";
 import { useChatBotContext } from "../Context/ChatBotContext";
+import { db } from "../utilities/firebase";
+import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
+import { useAuth } from "../Context/AuthContext";
 
 const Result = () => {
   const location = useLocation();
   const { startNewChat } = useChatBotContext();
   const [showDetails, setShowDetails] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [fetchedResult, setFetchedResult] = useState(null);
+  const { User } = useAuth();
 
   // Get data from navigation state
   const state = location.state || {};
@@ -16,24 +22,58 @@ const Result = () => {
   let fromHistory = state.fromHistory || false;
   let fromInterview = state.fromInterview || false;
 
-  // If coming from interview history, extract data from interviewData
-  if (fromHistory && state.interviewData) {
-    const interviewData = state.interviewData;
-    jobTitle = interviewData.jobTitle || "Interview";
-    questionsAndAnswers = interviewData.Result || [];
-    
-    // Calculate percentage based on individual ratings if available
+  // Fetch from DB if not present in state
+  useEffect(() => {
+    const fetchLatestInterview = async () => {
+      if (!User || questionsAndAnswers.length > 0 || fromHistory) return;
+      setLoading(true);
+      try {
+        const q = query(
+          collection(db, "Interview"),
+          where("UserId", "==", User.uid),
+          orderBy("timestamp", "desc"),
+          limit(1)
+        );
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const doc = querySnapshot.docs[0].data();
+          setFetchedResult(doc);
+        }
+      } catch (err) {
+        // Optionally handle error
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLatestInterview();
+    // eslint-disable-next-line
+  }, [User]);
+
+  if (fetchedResult) {
+    questionsAndAnswers = fetchedResult.Result || [];
+    jobTitle = fetchedResult.jobTitle || jobTitle;
     if (questionsAndAnswers.length > 0 && questionsAndAnswers[0].rating !== undefined) {
       const totalPoints = questionsAndAnswers.reduce((sum, qa) => sum + (qa.rating || 0), 0);
       const totalPossible = questionsAndAnswers.length * 10;
       percentage = Math.round((totalPoints / totalPossible) * 100);
     } else {
-      // Fallback calculation if no ratings available
       percentage = questionsAndAnswers.length > 0 ? Math.round((questionsAndAnswers.length / 5) * 80) : 0;
     }
   }
 
-  console.log('Percentage:', percentage, 'Details:', questionsAndAnswers, 'State:', state);
+  // If coming from interview history, extract data from interviewData
+  if (fromHistory && state.interviewData) {
+    const interviewData = state.interviewData;
+    jobTitle = interviewData.jobTitle || "Interview";
+    questionsAndAnswers = interviewData.Result || [];
+    if (questionsAndAnswers.length > 0 && questionsAndAnswers[0].rating !== undefined) {
+      const totalPoints = questionsAndAnswers.reduce((sum, qa) => sum + (qa.rating || 0), 0);
+      const totalPossible = questionsAndAnswers.length * 10;
+      percentage = Math.round((totalPoints / totalPossible) * 100);
+    } else {
+      percentage = questionsAndAnswers.length > 0 ? Math.round((questionsAndAnswers.length / 5) * 80) : 0;
+    }
+  }
 
   const progressColor = percentage >= 60 ? "#39FF14" : "#f87171";
 
@@ -111,38 +151,44 @@ const Result = () => {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen py-2 gap-8 bg-[#040E1A]">
-      <div
-        className="relative flex items-center justify-center rounded-full h-52 w-52"
-        style={{
-          background: `conic-gradient(${progressColor} 0% ${percentage}%, #e5e7eb ${percentage}% 100%)`,
-        }}
-      >
-        <div className="absolute text-4xl font-bold text-black">
-          {percentage}%
-        </div>
-      </div>
-      <div className="flex flex-col items-center gap-2">
-        {reviews.map((line, idx) => (
-          <p key={idx} className="md:text-lg text-base font-medium text-center text-white">
-            {line}
-          </p>
-        ))}
-      </div>
-      <button
-        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg shadow mt-2"
-        onClick={() => setShowDetails((prev) => !prev)}
-      >
-        {showDetails ? "Hide Details" : "View Full Details"}
-      </button>
-      {showDetails && fullDetails}
-      <div className="flex flex-col md:flex-row items-center justify-center md:gap-9 gap-6">
-        <Button>
-          <Link to="/app">GoTo DashBoard</Link>
-        </Button>
-        <Button>
-          <Link to="/interview-form">Restart Interview</Link>
-        </Button>
-      </div>
+      {loading ? (
+        <div className="text-white text-xl">Loading interview result...</div>
+      ) : (
+        <>
+          <div
+            className="relative flex items-center justify-center rounded-full h-52 w-52"
+            style={{
+              background: `conic-gradient(${progressColor} 0% ${percentage}%, #e5e7eb ${percentage}% 100%)`,
+            }}
+          >
+            <div className="absolute text-4xl font-bold text-black">
+              {percentage}%
+            </div>
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            {reviews.map((line, idx) => (
+              <p key={idx} className="md:text-lg text-base font-medium text-center text-white">
+                {line}
+              </p>
+            ))}
+          </div>
+          <button
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg shadow mt-2"
+            onClick={() => setShowDetails((prev) => !prev)}
+          >
+            {showDetails ? "Hide Details" : "View Full Details"}
+          </button>
+          {showDetails && fullDetails}
+          <div className="flex flex-col md:flex-row items-center justify-center md:gap-9 gap-6">
+            <Button>
+              <Link to="/app">GoTo DashBoard</Link>
+            </Button>
+            <Button>
+              <Link to="/interview-form">Restart Interview</Link>
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 };

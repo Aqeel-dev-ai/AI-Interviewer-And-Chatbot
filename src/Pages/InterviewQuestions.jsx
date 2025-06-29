@@ -10,7 +10,7 @@ const InterviewQuestions = () => {
   const {
     questions,
     interviewComplete,
-    analysisResults,
+    response,
     startVoiceInterview,
     isInterviewing,
     isListening,
@@ -36,15 +36,14 @@ const InterviewQuestions = () => {
     }
   }, [userStream, isInterviewing]);
 
-  const totalScore = analysisResults.reduce((sum, q) => sum + (q.rating || 0), 0);
-  const maxScore = analysisResults.length * 10;
-  const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
-
   if (interviewComplete) {
+    const totalScore = (response || []).reduce((sum, q) => sum + (q.rating || 0), 0);
+    const maxScore = (response || []).length * 10;
+    const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
     return (
       <div className="min-h-[calc(100dvh-80px)] py-6 w-full flex items-center justify-center bg-black">
         <div className="max-w-[1200px] lg:w-[80%] w-[97%] rounded-xl bg-[#040E1A] min-h-[80%] shadow-md shadow-blue-300 md:px-5 px-3 py-4">
-          <Result percentage={percentage} questionsAndAnswers={analysisResults} />
+          <Result percentage={percentage} questionsAndAnswers={response || []} />
         </div>
       </div>
     );
