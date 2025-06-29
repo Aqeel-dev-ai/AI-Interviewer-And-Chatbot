@@ -6,7 +6,6 @@ const NavbarLinks = ({ state }) => {
   const { User, handleLogout } = useAuth();
   const navigate = useNavigate();
   const pages = [
-    { Page: "Home", Path: "/home" },
     { Page: "ChatBot", Path: "/app" },
     { Page: "Interview Form", Path: "/interview-form" },
     { Page: "About", Path: "/about" },

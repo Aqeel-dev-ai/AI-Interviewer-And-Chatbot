@@ -121,7 +121,9 @@ const ContactUs = () => {
             <div className="text-center">
               <p className="text-gray-300 mb-3">Or contact us directly via email:</p>
               <a 
-                href="mailto:aqeel032035@gmail.com" 
+                href="https://mail.google.com/mail/?view=cm&fs=1&to=aqeel032035@gmail.com"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center space-x-2 text-blue-400 hover:text-blue-300 font-semibold text-lg transition-colors duration-200 px-4 py-2 rounded-lg hover:bg-blue-900/20"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">

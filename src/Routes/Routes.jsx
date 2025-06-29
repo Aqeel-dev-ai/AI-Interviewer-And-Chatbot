@@ -1,7 +1,6 @@
 import { createBrowserRouter, RouterProvider, Outlet } from "react-router-dom";
 import { AuthProvider, useAuth } from "../Context/AuthContext";
 import Layout from "../Layout/Layout";
-import Hero from "../Pages/Hero";
 import Signup from "../Pages/Signup";
 import Login from "../Pages/Login";
 import InterviewForm from "../Pages/InterviewForm";
@@ -29,12 +28,6 @@ function HomeRoute() {
   return <Landing />;
 }
 
-function ProtectedHome() {
-  const { User, fetchedUser } = useAuth();
-  if (!fetchedUser) return <div className="text-white text-center py-20">Loading...</div>;
-  return User ? <Hero /> : <Landing />;
-}
-
 const router = createBrowserRouter([
   {
     path: "/",
@@ -43,10 +36,6 @@ const router = createBrowserRouter([
       {
         index: true,
         element: <HomeRoute />,
-      },
-      {
-        path: "home",
-        element: <ProtectedHome />,
       },
       {
         path: "app",

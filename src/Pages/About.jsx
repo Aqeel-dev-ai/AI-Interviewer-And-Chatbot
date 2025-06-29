@@ -8,10 +8,10 @@ const team = [
     bio: "Aqeel is passionate about building AI-powered tools that empower job seekers and recruiters alike.",
   },
   {
-    name: "Sarah Khan",
-    role: "AI Researcher",
-    img: "https://randomuser.me/api/portraits/women/44.jpg",
-    bio: "Sarah specializes in natural language processing and user experience design.",
+    name: "Babar Jameel",
+    role: "Frontend Developer",
+    img: "/assets/Babar.jpeg",
+    bio: "Specialist in crafting dynamic web experiences using modern technologies like React, Tailwind CSS, and JavaScript.",
   },
 ];
 
