@@ -263,6 +263,37 @@ const InterviewForm = () => {
           </option>
         </select>
       </div>
+
+      <div className="flex flex-col gap-1 text-black">
+        <label
+          htmlFor="interviewTime"
+          className="text-lg font-semibold text-gray-100"
+        >
+          Interview Duration:
+        </label>
+        <select
+          {...register("interviewTime")}
+          id="interviewTime"
+          className="bg-slate-300 outline-none text-base font-semibold py-3 rounded-lg px-3"
+        >
+          <option className="text-base font-semibold " value="">
+            Select Interview Duration...
+          </option>
+          <option className="text-base font-semibold " value={15}>
+            15 Minutes
+          </option>
+          <option className="text-base font-semibold " value={30}>
+            30 Minutes
+          </option>
+          <option className="text-base font-semibold " value={45}>
+            45 Minutes
+          </option>
+          <option className="text-base font-semibold " value={60}>
+            60 Minutes
+          </option>
+        </select>
+      </div>
+
       <div className="flex  w-full flex-col gap-1 text-black">
         <TagInput></TagInput>
       </div>
@@ -338,6 +369,35 @@ const InterviewForm = () => {
           </option>
           <option className="text-base font-semibold " value={"Senior"}>
             Senior
+          </option>
+        </select>
+      </div>
+      <div className="flex flex-col gap-1 text-black">
+        <label
+          htmlFor="interviewTime"
+          className="text-lg font-semibold text-gray-100"
+        >
+          Interview Duration:
+        </label>
+        <select
+          {...register("interviewTime")}
+          id="interviewTime"
+          className="bg-slate-300 outline-none text-base font-semibold py-3 rounded-lg px-3"
+        >
+          <option className="text-base font-semibold " value="">
+            Select Interview Duration...
+          </option>
+          <option className="text-base font-semibold " value={15}>
+            15 Minutes
+          </option>
+          <option className="text-base font-semibold " value={30}>
+            30 Minutes
+          </option>
+          <option className="text-base font-semibold " value={45}>
+            45 Minutes
+          </option>
+          <option className="text-base font-semibold " value={60}>
+            60 Minutes
           </option>
         </select>
       </div>

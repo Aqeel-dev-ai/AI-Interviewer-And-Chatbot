@@ -5,8 +5,10 @@ import Inputs from "../Components/Inputs";
 import AuthButton from "../Components/AuthButton";
 
 const Login = () => {
-  const { LoginEmailRef, LoginPasswordRef, handleLoginSubmit } = useAuth();
+  const { LoginEmailRef, LoginPasswordRef, handleLoginSubmit, loading, error } = useAuth();
   const navigate = useNavigate();
+
+  console.log("Login page - error state:", error);
 
   const loginFields = [
     {
@@ -32,7 +34,15 @@ const Login = () => {
       <div className="flex flex-col bg-[#040E1A] w-[94%] sm:w-[400px] items-center gap-6 py-6 rounded-xl shadow-lg shadow-blue-300">
         <h1 className="text-4xl font-bold">Sign in</h1>
         <Inputs fields={loginFields} />
-        <AuthButton text={"Sign in"} handleSubmit={handleLoginSubmit} />
+        
+        {/* Error Message Display */}
+        {error && (
+          <div className="w-full sm:w-[85%] text-red-400 text-sm bg-red-900/20 p-3 rounded border border-red-700">
+            {error}
+          </div>
+        )}
+        
+        <AuthButton text={loading ? "Signing in..." : "Sign in"} handleSubmit={handleLoginSubmit} />
         <p>
           Don't have an account?
           <Link to="/signup" className="text-blue-500 pl-1">

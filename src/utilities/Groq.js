@@ -11,19 +11,39 @@ export const groq = axios.create({
 export const generateInterviewQuestion = async (
   jobDescription,
   previousQuestions = [],
-  difficulty = "normal"
+  questionIndex = 0
 ) => {
   try {
-    const systemPrompt = `You are Nova, a professional and empathetic AI interviewer. Your goal is to assess a candidate's suitability for a role in a realistic, conversational manner.`;
+    const systemPrompt = `You are Nova, a professional and empathetic AI interviewer. Your goal is to assess a candidate's suitability for a role in a realistic, conversational manner. Start with fundamental concepts and progressively move to more advanced topics.`;
 
-    let difficultyInstruction = "";
-    if (difficulty === "basic") {
-      difficultyInstruction = `The user has requested a simpler question. Ask a fundamental, basic-level question related to the core skills, ignoring the candidate's listed experience level for this turn.`;
+    // Create a progression system based on question index
+    let progressionInstruction = "";
+    if (questionIndex === 0) {
+      progressionInstruction = `This is the FIRST question. Start with the MOST BASIC and FUNDAMENTAL concepts of the core technologies mentioned in the job description. For example:
+      - For Frontend roles: Start with HTML basics, CSS fundamentals, or JavaScript basics
+      - For React roles: Start with React components, JSX, or basic React concepts
+      - For Backend roles: Start with basic programming concepts, data types, or simple algorithms
+      - For Data Science: Start with basic statistics, data types, or simple data manipulation
+      Ask a foundational question that any beginner should know about the core technology.`;
+    } else if (questionIndex <= 2) {
+      progressionInstruction = `This is an EARLY question (${questionIndex + 1} of the interview). Focus on basic to intermediate concepts of the core technologies. Ask about:
+      - Basic syntax and usage
+      - Common methods and functions
+      - Simple problem-solving scenarios
+      - Basic best practices`;
+    } else if (questionIndex <= 4) {
+      progressionInstruction = `This is a MID-LEVEL question (${questionIndex + 1} of the interview). Focus on intermediate concepts and practical application. Ask about:
+      - Real-world usage scenarios
+      - Common patterns and practices
+      - Problem-solving with the technology
+      - Integration and workflow`;
     } else {
-      difficultyInstruction = `Consider the candidate's experience level mentioned in the job description to adjust the question's difficulty:
-      - For 'Student' or 'Fresher', focus on fundamental concepts and project experiences.
-      - For 'Intermediate', ask about practical application, problem-solving scenarios, and past project details.
-      - For 'Senior', probe into system design, architecture, leadership, and strategic thinking.`;
+      progressionInstruction = `This is an ADVANCED question (${questionIndex + 1} of the interview). Focus on advanced concepts, optimization, and deep understanding. Ask about:
+      - Advanced features and techniques
+      - Performance optimization
+      - Architecture and design patterns
+      - Troubleshooting and debugging
+      - Best practices and industry standards`;
     }
 
     const userPrompt = `Based on the following job description, generate EXACTLY ONE relevant interview question.
@@ -31,9 +51,16 @@ export const generateInterviewQuestion = async (
     Job Description:
     ${jobDescription}
 
-    ${difficultyInstruction}
+    ${progressionInstruction}
 
-    The question should be concise (2-3 lines max), designed to be answered verbally, and should probe for real-world understanding, not just textbook definitions. Strive for variety and creativity.
+    IMPORTANT: Focus on the CORE TECHNOLOGIES mentioned in the job description. For example:
+    - If "React" is mentioned, ask about React concepts
+    - If "JavaScript" is mentioned, ask about JavaScript fundamentals
+    - If "Python" is mentioned, ask about Python basics
+    - If "SQL" is mentioned, ask about database concepts
+    - If "HTML/CSS" is mentioned, ask about web fundamentals
+
+    The question should be concise (2-3 lines max), designed to be answered verbally, and should probe for real-world understanding, not just textbook definitions.
 
     Previously asked questions (do not repeat these): ${previousQuestions.join(
       ", "
@@ -45,7 +72,7 @@ export const generateInterviewQuestion = async (
       model: "llama3-70b-8192",
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
+        { role: "user", content: userPrompt }
       ],
       temperature: 0.8,
       max_tokens: 150,

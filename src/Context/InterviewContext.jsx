@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
-import { generateInterviewQuestion, analyzeAnswer } from "../utilities/Groq";
+import { generateInterviewQuestion, analyzeAnswer } from "../utilities/Gemini";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
@@ -32,6 +32,7 @@ const interviewContext = createContext({
   countdown: 10,
   userStream: null,
   isCameraOn: false,
+  interviewTime: 30,
 });
 
 const InterviewContextProvider = ({ children }) => {
@@ -204,12 +205,14 @@ const InterviewContextProvider = ({ children }) => {
   // Countdown state
   const [isPreparing, setIsPreparing] = useState(false);
   const [countdown, setCountdown] = useState(10);
+  const [interviewTime, setInterviewTime] = useState(30); // Default 30 minutes
   
   const speechTimeoutRef = useRef(null);
   const silenceTimeoutRef = useRef(null);
   const recognitionRef = useRef(null);
   const currentQuestionIndexRef = useRef(0);
   const isInterviewStoppedRef = useRef(false);
+  const interviewStartTimeRef = useRef(null);
 
   useEffect(() => {
     if (response) {
@@ -218,8 +221,31 @@ const InterviewContextProvider = ({ children }) => {
       console.log("Job title:", jobTitle);
       console.log("User ID:", User.uid);
       
+      // Combine answers with their analysis results
+      const enrichedResponse = response.map((answer, index) => {
+        const analysis = analysisResults[index];
+        let rating = 0;
+        let feedback = "";
+        
+        if (analysis && analysis.analysis) {
+          // Parse the analysis text to extract rating and feedback
+          const analysisText = analysis.analysis;
+          const ratingMatch = analysisText.match(/Rating:\s*(\d+)\/10/);
+          const feedbackMatch = analysisText.match(/Feedback:\s*(.+?)(?=\n|$)/);
+          
+          rating = ratingMatch ? parseInt(ratingMatch[1]) : 0;
+          feedback = feedbackMatch ? feedbackMatch[1].trim() : "";
+        }
+        
+        return {
+          ...answer,
+          rating,
+          feedback
+        };
+      });
+      
       addDoc(collection(db, "Interview"), {
-        Result: response,
+        Result: enrichedResponse,
         timestamp: serverTimestamp(),
         UserId: User.uid,
         jobTitle,
@@ -232,13 +258,13 @@ const InterviewContextProvider = ({ children }) => {
           setInterviewComplete(true);
           setUserDetail(null);
           
-          // Navigate to Result page with the interview data
-          const percentage = calculatePercentage(response);
+          // Navigate to Result page with the enriched interview data
+          const percentage = calculatePercentage(enrichedResponse);
           console.log("Calculated percentage:", percentage);
           navigate("/result", {
             state: {
               percentage: percentage,
-              questionsAndAnswers: response,
+              questionsAndAnswers: enrichedResponse,
               jobTitle: jobTitle,
               fromInterview: true
             }
@@ -278,8 +304,8 @@ const InterviewContextProvider = ({ children }) => {
       let userDetailsPayload = {};
 
       if (formType === "resume") {
-        if (!formData.JobTitle || !formData.Experience || !formData.resumeText) {
-          throw new Error("Please provide a job title, experience level, and a valid resume.");
+        if (!formData.JobTitle || !formData.Experience || !formData.resumeText || !formData.interviewTime) {
+          throw new Error("Please provide a job title, experience level, interview duration, and a valid resume.");
         }
         jobDescription = `Job Title: ${formData.JobTitle}\nExperience: ${formData.Experience}\nResume Content: ${formData.resumeText}`;
         userDetailsPayload = {
@@ -288,8 +314,8 @@ const InterviewContextProvider = ({ children }) => {
           skills: ["Parsed from resume"],
         }
       } else {
-        if (!formData.JobTitle || !formData.Experience || !value.length) {
-          throw new Error("Please fill in all required fields including skills");
+        if (!formData.JobTitle || !formData.Experience || !value.length || !formData.interviewTime) {
+          throw new Error("Please fill in all required fields including skills and interview duration");
         }
         jobDescription = `Job Title: ${formData.JobTitle}\nExperience: ${formData.Experience}\nSkills: ${value.join(", ")}`;
         userDetailsPayload = {
@@ -298,9 +324,18 @@ const InterviewContextProvider = ({ children }) => {
         }
       }
       
+      // Generate a pool of questions based on interview time
+      // Generate more questions than needed to allow for natural flow
+      const baseQuestionCount = Math.max(5, Math.round(formData.interviewTime / 5)); // At least 5 questions, more for longer interviews
+      const questionPoolSize = Math.min(20, baseQuestionCount + 5); // Generate extra questions for flexibility
+      
+      console.log(`Interview time: ${formData.interviewTime} minutes, generating ${questionPoolSize} questions in pool`);
+      
+      setInterviewTime(formData.interviewTime);
+      
       const questions = [];
-      for (let i = 0; i < 5; i++) {
-        const question = await generateInterviewQuestion(jobDescription, questions);
+      for (let i = 0; i < questionPoolSize; i++) {
+        const question = await generateInterviewQuestion(jobDescription, questions, i);
         questions.push(question);
       }
       
@@ -314,7 +349,8 @@ const InterviewContextProvider = ({ children }) => {
         state: { 
           questions, 
           jobTitle: formData.JobTitle, 
-          userDetails: userDetailsPayload
+          userDetails: userDetailsPayload,
+          interviewTime: formData.interviewTime
         },
       });
     } catch (error) {
@@ -448,7 +484,7 @@ const InterviewContextProvider = ({ children }) => {
               speakText(currentQuestion, () => startSpeechRecognition());
             }
         });
-    }, 10000);
+    }, 15000); // Increased to 15 seconds for more patience
 
     recognition.onresult = (event) => {
       clearTimeout(silenceTimeoutRef.current);
@@ -478,7 +514,7 @@ const InterviewContextProvider = ({ children }) => {
             }
           });
         }
-      }, 3000);
+      }, 5000); // Increased to 5 seconds to wait for user to finish speaking
     };
     
     recognition.onerror = (event) => {
@@ -551,11 +587,18 @@ const InterviewContextProvider = ({ children }) => {
   };
   
   const moveToNextQuestion = (currentIndex) => {
-    console.log(`moveToNextQuestion called. Current index: ${currentIndex}, Total questions: ${questions.length}`);
+    console.log(`moveToNextQuestion called. Current index: ${currentIndex}, Total questions in pool: ${questions.length}`);
     
-    if (currentIndex >= questions.length - 1) {
-      console.log("Interview complete - all questions answered");
-      const endMessage = "Thank you. Your interview is now complete. We are generating your results.";
+    // Check if interview time has elapsed
+    const elapsedMinutes = (Date.now() - interviewStartTimeRef.current) / (1000 * 60);
+    const timeRemaining = interviewTime - elapsedMinutes;
+    
+    console.log(`Interview time: ${elapsedMinutes.toFixed(1)} minutes elapsed, ${timeRemaining.toFixed(1)} minutes remaining`);
+    
+    // Only end interview when time limit is reached, not based on question count
+    if (timeRemaining <= 1) {
+      console.log("Interview complete - time limit reached");
+      const endMessage = "Thank you. Your interview time has been reached. We are generating your results.";
       setTranscript((prev) => [...prev, { speaker: "ai", text: endMessage }]);
       speakText(endMessage, () => {
         // Stop the interview and wait for analysis to complete
@@ -571,6 +614,26 @@ const InterviewContextProvider = ({ children }) => {
       });
     } else {
       const nextIndex = currentIndex + 1;
+      
+      // If we've used all questions in the pool, generate more questions
+      if (nextIndex >= questions.length) {
+        console.log("Question pool exhausted, generating more questions");
+        // For now, we'll end the interview if we run out of questions
+        // In a more advanced implementation, we could generate more questions dynamically
+        const endMessage = "Thank you. We've covered all the prepared questions. We are generating your results.";
+        setTranscript((prev) => [...prev, { speaker: "ai", text: endMessage }]);
+        speakText(endMessage, () => {
+          stopVoiceInterview();
+          setInterviewComplete(true);
+          setTimeout(() => {
+            console.log("Setting response with answers:", Answers);
+            console.log("Analysis results:", analysisResults);
+            setResponse(Answers);
+          }, 2000);
+        });
+        return;
+      }
+      
       const nextQuestion = questions[nextIndex];
       
       console.log(`Moving to question ${nextIndex + 1}: ${nextQuestion}`);
@@ -601,12 +664,13 @@ const InterviewContextProvider = ({ children }) => {
   };
 
   const startInterview = () => {
-    const greeting = `Hello ${User?.displayName || 'there'}, welcome to your interview for the ${jobTitle} role. Let's begin.`;
+    const greeting = `Hello ${User?.displayName || 'there'}, welcome to your interview for the ${jobTitle} role. This interview will last ${interviewTime} minutes. Let's begin.`;
     const firstQuestion = questions[0];
 
     setIndex(0);
     currentQuestionIndexRef.current = 0; // Initialize the ref
     setAnswers([]);
+    interviewStartTimeRef.current = Date.now(); // Record start time
     
     setTranscript([{ speaker: "ai", text: greeting }, { speaker: "ai", text: firstQuestion }]);
     
@@ -699,25 +763,17 @@ const InterviewContextProvider = ({ children }) => {
   const calculatePercentage = (answers) => {
     if (!answers || answers.length === 0) return 0;
     
-    // If we have analysis results, use them to calculate score
-    if (analysisResults.length > 0) {
-      const totalPoints = analysisResults.reduce((sum, result) => {
-        // Parse the analysis text to extract rating
-        const analysisText = result.analysis || '';
-        const ratingMatch = analysisText.match(/Rating:\s*(\d+)\/10/);
-        const score = ratingMatch ? parseInt(ratingMatch[1]) : 7; // Default to 7 if no rating found
-        console.log(`Question: ${result.question}, Score: ${score}/10`);
-        return sum + score;
-      }, 0);
-      
-      const totalPossiblePoints = analysisResults.length * 10; // 10 points per question
-      const percentage = Math.round((totalPoints / totalPossiblePoints) * 100);
-      console.log(`Total Points: ${totalPoints}, Total Possible: ${totalPossiblePoints}, Percentage: ${percentage}%`);
-      return percentage;
-    }
+    // Calculate percentage based on individual answer ratings
+    const totalPoints = answers.reduce((sum, answer) => {
+      const rating = answer.rating || 0;
+      console.log(`Question: ${answer.question}, Score: ${rating}/10`);
+      return sum + rating;
+    }, 0);
     
-    // Default percentage based on number of questions answered
-    return Math.round((answers.length / 5) * 80); // Assuming 5 questions, 80% base score
+    const totalPossiblePoints = answers.length * 10; // 10 points per question
+    const percentage = Math.round((totalPoints / totalPossiblePoints) * 100);
+    console.log(`Total Points: ${totalPoints}, Total Possible: ${totalPossiblePoints}, Percentage: ${percentage}%`);
+    return percentage;
   };
 
   return (
@@ -748,6 +804,7 @@ const InterviewContextProvider = ({ children }) => {
         countdown,
         userStream,
         isCameraOn,
+        interviewTime,
       }}
     >
       {children}

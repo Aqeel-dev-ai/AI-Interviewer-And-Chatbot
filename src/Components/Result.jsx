@@ -21,8 +21,16 @@ const Result = () => {
     const interviewData = state.interviewData;
     jobTitle = interviewData.jobTitle || "Interview";
     questionsAndAnswers = interviewData.Result || [];
-    // Calculate percentage based on number of questions answered
-    percentage = questionsAndAnswers.length > 0 ? Math.round((questionsAndAnswers.length / 5) * 80) : 0;
+    
+    // Calculate percentage based on individual ratings if available
+    if (questionsAndAnswers.length > 0 && questionsAndAnswers[0].rating !== undefined) {
+      const totalPoints = questionsAndAnswers.reduce((sum, qa) => sum + (qa.rating || 0), 0);
+      const totalPossible = questionsAndAnswers.length * 10;
+      percentage = Math.round((totalPoints / totalPossible) * 100);
+    } else {
+      // Fallback calculation if no ratings available
+      percentage = questionsAndAnswers.length > 0 ? Math.round((questionsAndAnswers.length / 5) * 80) : 0;
+    }
   }
 
   console.log('Percentage:', percentage, 'Details:', questionsAndAnswers, 'State:', state);
@@ -53,24 +61,46 @@ const Result = () => {
 
   // Placeholder for full details (expand feature)
   const fullDetails = (
-    <div className="w-full max-w-2xl bg-[#1e293b] rounded-xl p-6 shadow-inner mt-6">
+    <div className="w-full max-w-4xl bg-[#1e293b] rounded-xl p-6 shadow-inner mt-6">
       <h3 className="text-white text-xl font-semibold mb-4">Interview Results for: {jobTitle}</h3>
+      <div className="mb-4 p-3 bg-[#232b47] rounded-lg">
+        <div className="text-white text-lg font-semibold">Summary</div>
+        <div className="text-gray-300">Total Questions: {questionsAndAnswers.length}</div>
+        <div className="text-gray-300">Overall Score: {percentage}%</div>
+      </div>
       <ul className="space-y-6">
         {questionsAndAnswers.length === 0 ? (
           <li className="text-white">No questions found.</li>
         ) : (
-          questionsAndAnswers.map((q, idx) => (
-            <li key={idx} className="bg-[#232b47] rounded-lg p-4 text-white shadow flex flex-col gap-2">
-              <div className="font-semibold">Q{idx + 1}: {q.question}</div>
-              <div className="text-base pl-2">Your answer: <span className="font-medium text-blue-300">{q.answer}</span></div>
-              {q.rating && (
-                <div className="text-base pl-2">Rating: <span className="font-medium text-yellow-300">{q.rating}/10</span></div>
+          questionsAndAnswers.map((qa, idx) => (
+            <li key={idx} className="bg-[#232b47] rounded-lg p-4 text-white shadow">
+              <div className="flex justify-between items-start mb-3">
+                <div className="font-semibold text-lg">Q{idx + 1}: {qa.question}</div>
+                <div className="bg-yellow-600 text-white px-3 py-1 rounded-full text-sm font-bold">
+                  {qa.rating || 0}/10
+                </div>
+              </div>
+              <div className="mb-3">
+                <div className="text-sm text-gray-400 mb-1">Your Answer:</div>
+                <div className="text-blue-300 bg-[#1a2332] p-3 rounded border-l-4 border-blue-500">
+                  {qa.answer}
+                </div>
+              </div>
+              {qa.feedback && (
+                <div className="mb-3">
+                  <div className="text-sm text-gray-400 mb-1">Feedback:</div>
+                  <div className="text-green-300 bg-[#1a2332] p-3 rounded border-l-4 border-green-500">
+                    {qa.feedback}
+                  </div>
+                </div>
               )}
-              {q.feedback && (
-                <div className="text-base pl-2">Feedback: <span className="font-medium text-green-300">{q.feedback}</span></div>
-              )}
-              {q.correctAnswer && (
-                <div className="text-base pl-2">Correct Answer: <span className="font-medium text-pink-300">{q.correctAnswer}</span></div>
+              {qa.correctAnswer && (
+                <div>
+                  <div className="text-sm text-gray-400 mb-1">Correct Answer:</div>
+                  <div className="text-pink-300 bg-[#1a2332] p-3 rounded border-l-4 border-pink-500">
+                    {qa.correctAnswer}
+                  </div>
+                </div>
               )}
             </li>
           ))

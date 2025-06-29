@@ -57,15 +57,6 @@ export const AuthProvider = ({ children }) => {
     transition: Bounce,
   };
 
-  useEffect(() => {
-    if (error) {
-      let errorMessage = typeof error === 'string' ? error : error.message || 'An error occurred';
-      let errorSlice = errorMessage.slice(0, 50);
-      toast.error(errorSlice, toastObj);
-      setError(null);
-    }
-  }, [error]);
-
   const signupNameRef = useRef();
   const signupEmailRef = useRef();
   const signupPasswordRef = useRef();
@@ -94,8 +85,8 @@ export const AuthProvider = ({ children }) => {
       setError("Invalid email format");
       return false;
     }
-    if (password.length < 6) {
-      setError("Password should be at least 6 characters");
+    if (password.length < 8) {
+      setError("Password should be at least 8 characters");
       return false;
     }
     return true;
@@ -107,10 +98,10 @@ export const AuthProvider = ({ children }) => {
         setError("Email already registered. Please Login.");
         break;
       case "auth/user-not-found":
-        setError("User not found. Please Sign up.");
+        setError("Invalid Credentials");
         break;
       case "auth/wrong-password":
-        setError("Incorrect password. Please try again.");
+        setError("Invalid Credentials");
         break;
       case "auth/invalid-email":
         setError("Invalid email format.");
@@ -119,7 +110,7 @@ export const AuthProvider = ({ children }) => {
         setError("Network error. Check connection.");
         break;
       default:
-        setError("An error occurred. Please try again.");
+        setError("Invalid Credentials");
     }
   };
 
@@ -217,6 +208,11 @@ export const AuthProvider = ({ children }) => {
   
 
   const handleSignupSubmit = async (navigate) => {
+    console.log("handleSignupSubmit called with navigate:", navigate);
+    console.log("Email:", signupEmailRef.current?.value);
+    console.log("Password:", signupPasswordRef.current?.value);
+    console.log("Name:", signupNameRef.current?.value);
+    
     const success = await signup(
       signupEmailRef.current.value,
       signupPasswordRef.current.value,
