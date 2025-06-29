@@ -57,26 +57,6 @@ const ContactUs = () => {
         <div className="bg-[#10192b] rounded-3xl shadow-2xl border border-gray-700 p-8 md:p-10 z-10 relative">
           <h2 className="text-3xl font-bold text-pink-400 mb-6 text-center">Contact Us</h2>
           <p className="text-base text-gray-200 mb-6 text-center">We'd love to hear from you! Fill out the form below for support, feedback, or collaboration opportunities.</p>
-          
-          {/* Direct Contact Section */}
-          <div className="mb-8 p-4 bg-[#232b47] rounded-lg border border-gray-600">
-            <h3 className="text-xl font-semibold text-white mb-3 text-center">Direct Contact</h3>
-            <div className="flex flex-col items-center space-y-2">
-              <p className="text-gray-300 text-center">For immediate assistance or direct communication:</p>
-              <a 
-                href="mailto:aqeel@example.com" 
-                className="text-blue-400 hover:text-blue-300 font-semibold text-lg transition-colors duration-200 flex items-center space-x-2"
-              >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                  <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                </svg>
-                <span>aqeel032035@gmail.com</span>
-              </a>
-              <p className="text-sm text-gray-400 text-center">Click to send an email directly</p>
-            </div>
-          </div>
-
           {submitted && (
             <div className="text-green-400 font-semibold text-center py-4 mb-6 bg-green-900/20 rounded-lg border border-green-700">
               Thank you for reaching out! We'll get back to you soon.
@@ -150,7 +130,6 @@ const ContactUs = () => {
                 </svg>
                 <span>aqeel032035@gmail.com</span>
               </a>
-              <p className="text-sm text-gray-400 mt-2">Click to open your email client</p>
             </div>
           </div>
         </div>

@@ -214,6 +214,8 @@ const InterviewContextProvider = ({ children }) => {
   const isInterviewStoppedRef = useRef(false);
   const interviewStartTimeRef = useRef(null);
   const answersRef = useRef([]);
+  const currentTranscriptRef = useRef("");
+  const answerFinalizedRef = useRef(false);
 
   useEffect(() => {
     answersRef.current = Answers;
@@ -492,35 +494,42 @@ const InterviewContextProvider = ({ children }) => {
         });
     }, 15000); // Increased to 15 seconds for more patience
 
+    currentTranscriptRef.current = ""; // Reset for new question
+    answerFinalizedRef.current = false; // Reset answer finalized flag
     recognition.onresult = (event) => {
       clearTimeout(silenceTimeoutRef.current);
       clearTimeout(speechTimeoutRef.current);
 
-      let combinedTranscript = "";
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        combinedTranscript += event.results[i][0].transcript;
+      // Build the full transcript from all results
+      let fullTranscript = "";
+      for (let i = 0; i < event.results.length; ++i) {
+        fullTranscript += event.results[i][0].transcript;
       }
-      
-      console.log(`Speech detected: ${combinedTranscript}`);
-      
+      currentTranscriptRef.current = fullTranscript;
+      console.log(`[DEBUG] Accumulated transcript: ${currentTranscriptRef.current}`);
+
+      // Wait 4 seconds after last speech before finalizing
       speechTimeoutRef.current = setTimeout(() => {
-        recognition.stop();
-        setIsListening(false);
-        const finalAnswer = combinedTranscript.trim();
-        if (finalAnswer && !isInterviewStoppedRef.current) {
-          console.log(`Processing answer for question ${currentIndex + 1}`);
-          setTranscript((prev) => [...prev, { speaker: "user", text: finalAnswer }]);
-          handleUserAnswer(finalAnswer, currentIndex);
-        } else if (!isInterviewStoppedRef.current) {
-          // If no answer was captured, restart recognition
-          console.log("No answer captured, restarting recognition");
-          speakText("I didn't catch that. Could you please repeat your answer?", () => {
-            if (!isInterviewStoppedRef.current) {
-              startSpeechRecognition();
-            }
-          });
+        if (!answerFinalizedRef.current) {
+          answerFinalizedRef.current = true;
+          recognition.stop();
+          setIsListening(false);
+          const finalAnswer = currentTranscriptRef.current.trim();
+          if (finalAnswer && !isInterviewStoppedRef.current) {
+            console.log(`Processing answer for question ${currentIndex + 1}`);
+            setTranscript((prev) => [...prev, { speaker: "user", text: finalAnswer }]);
+            handleUserAnswer(finalAnswer, currentIndex);
+          } else if (!isInterviewStoppedRef.current) {
+            // If no answer was captured, restart recognition
+            console.log("No answer captured, restarting recognition");
+            speakText("I didn't catch that. Could you please repeat your answer?", () => {
+              if (!isInterviewStoppedRef.current) {
+                startSpeechRecognition();
+              }
+            });
+          }
         }
-      }, 5000); // Increased to 5 seconds to wait for user to finish speaking
+      }, 4000); // Wait 4 seconds after last speech
     };
     
     recognition.onerror = (event) => {
@@ -542,6 +551,15 @@ const InterviewContextProvider = ({ children }) => {
         clearTimeout(silenceTimeoutRef.current);
         clearTimeout(speechTimeoutRef.current);
         setIsListening(false);
+        // On end, process the accumulated transcript if not already processed
+        if (!answerFinalizedRef.current) {
+          answerFinalizedRef.current = true;
+          const finalAnswer = currentTranscriptRef.current.trim();
+          if (finalAnswer && !isInterviewStoppedRef.current) {
+            setTranscript((prev) => [...prev, { speaker: "user", text: finalAnswer }]);
+            handleUserAnswer(finalAnswer, currentIndex);
+          }
+        }
     }
 
     try {
