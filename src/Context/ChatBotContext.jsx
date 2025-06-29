@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 import { useAuth } from "./AuthContext";
 import { GeminiApiCall } from "../utilities/Gemini";
+import { generateInterviewQuestion as generateGroqQuestion, analyzeAnswer as analyzeGroqAnswer, chatWithGroq } from "../utilities/Groq";
 import { VoiceChat } from "@mui/icons-material";
 
 const ChatBotContext = createContext({
@@ -47,6 +48,10 @@ const ChatBotContext = createContext({
   disable: false,
   voiceChat: false,
   setVoiceChat: () => {},
+  selectedModel: "gemini",
+  setSelectedModel: () => {},
+  isGroq: false,
+  isGemini: false,
 });
 
 export const ChatBotContextProvider = ({ children }) => {
@@ -67,6 +72,9 @@ export const ChatBotContextProvider = ({ children }) => {
   const [isConversation, setIsConversation] = useState(false);
   const [AskQuestion, setAskQuestion] = useState(false);
   const [disable, setDisable] = useState(false);
+  const [selectedModel, setSelectedModel] = useState("gemini");
+  const isGroq = selectedModel === "groq";
+  const isGemini = selectedModel === "gemini";
   const { User, setError } = useAuth();
 
   const stopResponseRef = useRef(stopResponse);
@@ -240,8 +248,16 @@ export const ChatBotContextProvider = ({ children }) => {
     let responseText;
     try {
       const ChatHistory = findChats();
-      // For now, let's test without history
-      responseText = await GeminiApiCall(UserInput);
+      if (selectedModel === "groq") {
+        const formattedHistory = Chat.map(chat => [
+          { role: "user", content: chat.Prompt },
+          { role: "assistant", content: chat.Response }
+        ]).flat();
+        
+        responseText = await chatWithGroq(UserInput, formattedHistory);
+      } else {
+        responseText = await GeminiApiCall(UserInput);
+      }
       await saveUserChat({
         Prompt: UserInput,
         Response: responseText,
@@ -282,7 +298,12 @@ export const ChatBotContextProvider = ({ children }) => {
         return;
       }
       try {
-        const responseText = await GeminiApiCall(spokenText);
+        let responseText;
+        if (selectedModel === "groq") {
+          responseText = await chatWithGroq(spokenText, []);
+        } else {
+          responseText = await GeminiApiCall(spokenText);
+        }
         speakText(responseText);
         setDisable(false);
       } catch (error) {
@@ -353,6 +374,10 @@ export const ChatBotContextProvider = ({ children }) => {
         handleCancel,
         setVoiceChat,
         voiceChat,
+        selectedModel,
+        setSelectedModel,
+        isGroq,
+        isGemini,
       }}
     >
       {children}

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
-import { generateInterviewQuestion, analyzeAnswer } from "../utilities/Gemini";
+import { generateInterviewQuestion as generateGeminiQuestion, analyzeAnswer as analyzeGeminiAnswer } from "../utilities/Gemini";
+import { generateInterviewQuestion as generateGroqQuestion, analyzeAnswer as analyzeGroqAnswer } from "../utilities/Groq";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
@@ -33,6 +34,10 @@ const interviewContext = createContext({
   userStream: null,
   isCameraOn: false,
   interviewTime: 30,
+  selectedModel: "gemini",
+  setSelectedModel: () => {},
+  isGroq: false,
+  isGemini: false,
 });
 
 const InterviewContextProvider = ({ children }) => {
@@ -217,6 +222,11 @@ const InterviewContextProvider = ({ children }) => {
   const currentTranscriptRef = useRef("");
   const answerFinalizedRef = useRef(false);
 
+  const [selectedModel, setSelectedModel] = useState("gemini"); // 'gemini' or 'groq'
+
+  const isGroq = selectedModel === "groq";
+  const isGemini = selectedModel === "gemini";
+
   useEffect(() => {
     answersRef.current = Answers;
   }, [Answers]);
@@ -303,6 +313,14 @@ const InterviewContextProvider = ({ children }) => {
     return () => clearTimeout(timerId);
   }, [isPreparing, countdown]);
 
+  // Helper to get the right model's functions
+  const getModelFns = () => {
+    if (selectedModel === "groq") {
+      return { generateInterviewQuestion: generateGroqQuestion, analyzeAnswer: analyzeGroqAnswer };
+    }
+    return { generateInterviewQuestion: generateGeminiQuestion, analyzeAnswer: analyzeGeminiAnswer };
+  };
+
   const onSubmit = async (formData, formType = "manual") => {
     try {
       setGenerateQuestions(true);
@@ -342,6 +360,7 @@ const InterviewContextProvider = ({ children }) => {
       setInterviewTime(formData.interviewTime);
       
       const questions = [];
+      const { generateInterviewQuestion } = getModelFns();
       for (let i = 0; i < questionPoolSize; i++) {
         const question = await generateInterviewQuestion(jobDescription, questions, i);
         questions.push(question);
@@ -584,7 +603,6 @@ const InterviewContextProvider = ({ children }) => {
       return;
     }
     console.log("Processing valid answer");
-    // Use functional update to always append, never overwrite
     setAnswers(prevAnswers => {
       const updatedAnswers = [...prevAnswers, { question: currentQuestion, answer }];
       console.log("[LOG] Answers after setAnswers (functional):", updatedAnswers);
@@ -592,6 +610,7 @@ const InterviewContextProvider = ({ children }) => {
     });
     try {
       const jobDescription = `Job Title: ${jobTitle}\nExperience: ${userdetail.Experience || userdetail.experience}\nSkills: ${userdetail.skills.join(", ")}`;
+      const { analyzeAnswer } = getModelFns();
       const analysis = await analyzeAnswer(currentQuestion, answer, jobDescription);
       setAnalysisResults(prev => [...prev, {
         question: currentQuestion,
@@ -826,6 +845,10 @@ const InterviewContextProvider = ({ children }) => {
         userStream,
         isCameraOn,
         interviewTime,
+        selectedModel,
+        setSelectedModel,
+        isGroq,
+        isGemini,
       }}
     >
       {children}

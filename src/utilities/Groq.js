@@ -127,3 +127,42 @@ export const analyzeAnswer = async (question, answer, jobDescription) => {
     throw error;
   }
 };
+
+export const chatWithGroq = async (userMessage, chatHistory = []) => {
+  try {
+    const systemPrompt = `You are Nova, a helpful and friendly AI assistant. You are knowledgeable, empathetic, and always ready to help with any questions or tasks. You provide clear, accurate, and helpful responses while maintaining a conversational and approachable tone.`;
+
+    // Prepare messages array with system prompt and chat history
+    const messages = [
+      { role: "system", content: systemPrompt }
+    ];
+
+    // Add chat history if provided
+    if (chatHistory.length > 0) {
+      chatHistory.forEach(msg => {
+        messages.push({ role: msg.role, content: msg.content });
+      });
+    }
+
+    // Add the current user message
+    messages.push({ role: "user", content: userMessage });
+
+    const response = await groq.post("/chat/completions", {
+      model: "llama3-70b-8192",
+      messages: messages,
+      temperature: 0.7,
+      max_tokens: 1000,
+    });
+
+    return response.data.choices[0]?.message?.content.trim() || "I'm sorry, I couldn't generate a response. Please try again.";
+  } catch (error) {
+    console.error("Error in Groq chat:", error.response?.data || error.message);
+    
+    // Handle rate limit errors gracefully
+    if (error.response?.status === 429) {
+      throw new Error("Rate limit exceeded. Please try again in a moment or consider upgrading your Groq plan.");
+    }
+    
+    throw new Error("Sorry, I'm having trouble connecting to the AI service. Please try again later.");
+  }
+};

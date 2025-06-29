@@ -11,7 +11,7 @@ const CHAT_INPUT_HEIGHT = 90;
 const SIDEBAR_WIDTH = 240;
 
 const ChatBot = () => {
-  const { isChat, userName, fetchUserName, selectedResult, voiceChat } = useChatBotContext();
+  const { isChat, userName, fetchUserName, selectedResult, voiceChat, selectedModel, setSelectedModel } = useChatBotContext();
   const [sidebarOpen] = useState(true); // fixed open sidebar
   const chatEndRef = useRef(null);
 
@@ -74,6 +74,19 @@ const ChatBot = () => {
         style={{ height: '90px' }}
       >
         <div className="w-full max-w-5xl mx-auto flex items-center justify-center h-full">
+          {/* Model selection dropdown */}
+          <div className="mb-6 flex flex-col items-center">
+            <label htmlFor="chatbot-model-select" className="w-40 text-white font-semibold mb-2">Select AI Model</label>
+            <select
+              id="chatbot-model-select"
+              value={selectedModel}
+              onChange={e => setSelectedModel(e.target.value)}
+              className="px-4 py-2 rounded-lg border border-gray-700 bg-[#232b47] text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              <option value="gemini">Gemini</option>
+              <option value="groq">Groq</option>
+            </select>
+          </div>
           <ChatForm />
         </div>
       </div>

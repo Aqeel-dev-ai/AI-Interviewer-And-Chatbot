@@ -79,6 +79,8 @@ const InterviewForm = () => {
     register,
     GenerateQuestions,
     btndisable,
+    selectedModel,
+    setSelectedModel,
   } = useInterviewContext();
 
   const [formMode, setFormMode] = useState("manual"); // 'manual' or 'resume'
@@ -463,6 +465,19 @@ const InterviewForm = () => {
               >
                 Upload Resume
               </button>
+            </div>
+            {/* Model selection dropdown */}
+            <div className="mb-6 flex flex-col items-center">
+              <label htmlFor="model-select" className="text-white font-semibold mb-2">Select AI Model</label>
+              <select
+                id="model-select"
+                value={selectedModel}
+                onChange={e => setSelectedModel(e.target.value)}
+                className="px-4 py-2 rounded-lg border border-gray-700 bg-[#232b47] text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
+                <option value="gemini">Gemini</option>
+                <option value="groq">Groq</option>
+              </select>
             </div>
             {formMode === 'manual' ? ManualForm : ResumeForm}
           </div>
