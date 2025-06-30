@@ -343,7 +343,7 @@ const InterviewContextProvider = ({ children }) => {
         if (!formData.JobTitle || !formData.Experience || !value.length || !formData.interviewTime) {
           throw new Error("Please fill in all required fields including skills and interview duration");
         }
-        jobDescription = `Job Title: ${formData.JobTitle}\nExperience: ${formData.Experience}\nSkills: ${value.join(", ")}`;
+        jobDescription = `Job Title: ${formData.JobTitle}\nExperience: ${formData.Experience}\nJob Description: ${formData.Description || 'Not provided'}\nSkills: ${value.join(", ")}`;
         userDetailsPayload = {
           ...formData,
           skills: value
@@ -362,7 +362,7 @@ const InterviewContextProvider = ({ children }) => {
       const questions = [];
       const { generateInterviewQuestion } = getModelFns();
       for (let i = 0; i < questionPoolSize; i++) {
-        const question = await generateInterviewQuestion(jobDescription, questions, i);
+        const question = await generateInterviewQuestion(jobDescription, questions, i, formData.Experience, value);
         questions.push(question);
       }
       
@@ -609,9 +609,9 @@ const InterviewContextProvider = ({ children }) => {
       return updatedAnswers;
     });
     try {
-      const jobDescription = `Job Title: ${jobTitle}\nExperience: ${userdetail.Experience || userdetail.experience}\nSkills: ${userdetail.skills.join(", ")}`;
+      const jobDescription = `Job Title: ${jobTitle}\nExperience: ${userdetail.Experience || userdetail.experience}\nJob Description: ${userdetail.Description || 'Not provided'}\nSkills: ${userdetail.skills.join(", ")}`;
       const { analyzeAnswer } = getModelFns();
-      const analysis = await analyzeAnswer(currentQuestion, answer, jobDescription);
+      const analysis = await analyzeAnswer(currentQuestion, answer, jobDescription, userdetail.Experience || userdetail.experience);
       setAnalysisResults(prev => [...prev, {
         question: currentQuestion,
         answer,

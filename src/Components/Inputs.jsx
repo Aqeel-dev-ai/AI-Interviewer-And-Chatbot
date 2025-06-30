@@ -31,7 +31,7 @@ const Inputs = ({ fields }) => {
                 type={isPassword && showPassword ? "text" : input.type}
                 placeholder={input.placeholder}
                 autoComplete={input.autocomplete}
-                className={`w-full bg-[#05070A] border-[1px] border-solid rounded-lg px-4 py-2 outline-none pr-14 ${
+                className={`w-full bg-[#232b47] border-[1px] border-solid rounded-lg px-4 py-2 outline-none pr-12 ${
                   input.className ? input.className : 'border-blue-700'
                 }`}
               />
@@ -39,7 +39,7 @@ const Inputs = ({ fields }) => {
                 <button
                   type="button"
                   onClick={() => togglePasswordVisibility(input.id)}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-white p-2 rounded-md transition-all duration-200 border-0 focus:outline-none focus:ring-0"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white p-1 rounded-md transition-all duration-200 border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
                   title={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? (

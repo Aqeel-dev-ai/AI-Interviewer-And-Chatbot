@@ -52,8 +52,8 @@ const ContactUs = () => {
   };
 
   return (
-    <div className="relative min-h-screen w-full bg-[#040E1A] flex flex-col items-center justify-start py-0 overflow-hidden">
-      <div className="w-full max-w-2xl mx-auto mt-12">
+    <div className="w-full bg-[#040E1A] flex flex-col items-center justify-start py-0 overflow-y-auto" style={{ height: 'calc(100vh - 80px)' }}>
+      <div className="w-full max-w-2xl mx-auto mt-8">
         <div className="bg-[#10192b] rounded-3xl shadow-2xl border border-gray-700 p-8 md:p-10 z-10 relative">
           <h2 className="text-3xl font-bold text-pink-400 mb-6 text-center">Contact Us</h2>
           <p className="text-base text-gray-200 mb-6 text-center">We'd love to hear from you! Fill out the form below for support, feedback, or collaboration opportunities.</p>

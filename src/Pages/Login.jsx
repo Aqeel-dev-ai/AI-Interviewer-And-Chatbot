@@ -8,8 +8,6 @@ const Login = () => {
   const { LoginEmailRef, LoginPasswordRef, handleLoginSubmit, loading, error } = useAuth();
   const navigate = useNavigate();
 
-  console.log("Login page - error state:", error);
-
   const loginFields = [
     {
       type: "email",

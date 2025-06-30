@@ -88,6 +88,7 @@ const InterviewForm = () => {
   const [isParsing, setIsParsing] = useState(false);
   const [fileName, setFileName] = useState("");
   const [parseError, setParseError] = useState("");
+  const [formError, setFormError] = useState("");
 
   const handleInterviewSelect = (interview) => {
     // Navigate to Result page with interview data
@@ -149,14 +150,26 @@ const InterviewForm = () => {
   const handleResumeSubmit = (data) => {
     if (!resumeText) {
       setParseError("Please upload a resume and wait for it to be processed.");
+      setFormError("Please upload a resume and wait for it to be processed.");
       return;
     }
+    setFormError("");
     onSubmit({ ...data, resumeText }, "resume");
+  };
+
+  // Wrap onSubmit to catch errors and set formError
+  const wrappedOnSubmit = async (data, mode) => {
+    try {
+      setFormError("");
+      await onSubmit(data, mode);
+    } catch (err) {
+      setFormError("An error occurred while submitting the form. Please try again.");
+    }
   };
 
   const ManualForm = (
     <form
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={handleSubmit((data) => wrappedOnSubmit(data, "manual"))}
       className="w-full grid grid-cols-1 gap-6 lg:px-10 px-3"
     >
       <div className="flex flex-col gap-1 text-black">
@@ -227,10 +240,18 @@ const InterviewForm = () => {
         <textarea
           id="description"
           rows="4"
-          placeholder="Enter Job Description..."
-          className="placeholder-black outline-none bg-slate-300 rounded-lg px-3 py-1 text-base font-semibold custom-sidebar"
+          placeholder="Describe the job role you're preparing for. Include key responsibilities, required technologies, tools, frameworks, and any specific requirements. This helps generate more relevant interview questions.
+
+Examples:
+• React Developer: Building responsive UIs, state management, API integration, testing
+• Python Backend: REST APIs, database design, cloud deployment, microservices
+• Data Scientist: Machine learning models, data analysis, statistical modeling, visualization"
+          className="placeholder-gray-500 outline-none bg-slate-300 rounded-lg px-3 py-1 text-base font-semibold custom-sidebar"
           {...register("Description")}
         ></textarea>
+        <p className="text-sm text-gray-400 mt-1">
+          💡 Tip: The more specific you are about the role, technologies, and requirements, the better tailored your interview questions will be.
+        </p>
       </div>
 
       <div className="flex flex-col gap-1 text-black">
@@ -297,9 +318,17 @@ const InterviewForm = () => {
       </div>
 
       <div className="flex  w-full flex-col gap-1 text-black">
+        <label className="text-lg font-semibold text-gray-100">
+          Skills & Technologies:
+        </label>
         <TagInput></TagInput>
       </div>
-       <div className="mt-3 w-full flex items-center justify-center">
+       <div className="mt-3 w-full flex items-center justify-center flex-col">
+        {formError && (
+          <div className="w-full text-red-400 text-sm bg-red-900/20 p-3 rounded border border-red-700 mb-2">
+            {formError}
+          </div>
+        )}
         <button
           disabled={btndisable}
           type="submit"
@@ -421,7 +450,12 @@ const InterviewForm = () => {
         {fileName && !isParsing && <p className="text-sm text-green-400 mt-2">Ready to submit: {fileName}</p>}
         {parseError && <p className="text-sm text-red-500 mt-2">{parseError}</p>}
       </div>
-       <div className="mt-3 w-full flex items-center justify-center">
+       <div className="mt-3 w-full flex items-center justify-center flex-col">
+        {formError && (
+          <div className="w-full text-red-400 text-sm bg-red-900/20 p-3 rounded border border-red-700 mb-2">
+            {formError}
+          </div>
+        )}
         <button
           disabled={btndisable || isParsing}
           type="submit"
@@ -434,56 +468,63 @@ const InterviewForm = () => {
   )
 
   return (
-    <div className="min-h-[100dvh] w-full flex items-center justify-center px-2">
+    <div className="w-full flex items-start justify-center px-2" style={{ height: 'calc(100vh - 80px)', minHeight: 'calc(100vh - 80px)' }}>
       {/* Interview History Sidebar */}
       <InterviewHistorySidebar onInterviewSelect={handleInterviewSelect} />
       {/* Main Content with left margin for sidebar */}
-      <div className="w-full max-w-[900px] bg-[#040E1A] rounded-xl shadow-lg shadow-blue-300 flex flex-col py-6 h-full" style={{ marginLeft: '340px' }}>
-        <div className="flex-1 flex flex-col justify-between w-full gap-7 px-1">
-          <div>
-            <h1 className="text-center text-3xl font-bold mb-4">
-              Tell Us About Your Job Focus
-            </h1>
-            <div className="flex justify-center items-center p-1 bg-gray-800/50 rounded-lg mb-6">
-              <button
-                onClick={() => setFormMode("manual")}
-                className={`px-6 py-2 text-sm font-medium rounded-md ${
-                  formMode === "manual"
-                    ? "bg-blue-600 text-white"
-                    : "text-gray-300"
-                }`}
-              >
-                Fill Form Manually
-              </button>
-              <button
-                onClick={() => setFormMode("resume")}
-                className={`px-6 py-2 text-sm font-medium rounded-md ${
-                  formMode === "resume"
-                    ? "bg-blue-600 text-white"
-                    : "text-gray-300"
-                }`}
-              >
-                Upload Resume
-              </button>
-            </div>
-            {/* Model selection dropdown */}
-            <div className="mb-6 flex flex-col items-center">
-              <label htmlFor="model-select" className="text-white font-semibold mb-2">Select AI Model</label>
-              <select
-                id="model-select"
-                value={selectedModel}
-                onChange={e => setSelectedModel(e.target.value)}
-                className="px-4 py-2 rounded-lg border border-gray-700 bg-[#232b47] text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-              >
-                <option value="gemini">Gemini</option>
-                <option value="groq">Groq</option>
-              </select>
-            </div>
-            {formMode === 'manual' ? ManualForm : ResumeForm}
+      <div className="w-full max-w-[900px] bg-[#040E1A] rounded-xl shadow-lg shadow-blue-300 flex flex-col h-full" style={{ marginLeft: '340px' }}>
+        {/* Fixed Header */}
+        <div className="flex-shrink-0 p-2">
+          <h1 className="text-center text-2xl font-bold mb-2">
+            Tell Us About Your Job Focus
+          </h1>
+          <div className="flex justify-center items-center p-1 bg-gray-800/50 rounded-lg mb-2">
+            <button
+              onClick={() => setFormMode("manual")}
+              className={`px-6 py-2 text-sm font-medium rounded-md ${
+                formMode === "manual"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-300"
+              }`}
+            >
+              Fill Form Manually
+            </button>
+            <button
+              onClick={() => setFormMode("resume")}
+              className={`px-6 py-2 text-sm font-medium rounded-md ${
+                formMode === "resume"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-300"
+              }`}
+            >
+              Upload Resume
+            </button>
           </div>
-          <div className="w-full lg:px-10 flex flex-col lg:flex-row gap-1 items-center justify-center px-3">
-            <h1 className="self-start text-lg font-semibold">Note:</h1>
-            <p className="lg:pl-2 text-base font-semibold text-gray-300">
+          {/* Model selection dropdown */}
+          <div className="mb-2 flex items-center justify-center gap-3">
+            <label htmlFor="model-select" className="text-white font-semibold">Select AI Model:</label>
+            <select
+              id="model-select"
+              value={selectedModel}
+              onChange={e => setSelectedModel(e.target.value)}
+              className="px-4 py-2 rounded-lg border border-gray-700 bg-[#232b47] text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              <option value="gemini">Gemini</option>
+              <option value="groq">Groq</option>
+            </select>
+          </div>
+        </div>
+        
+        {/* Scrollable Content Area */}
+        <div className="flex-1 overflow-y-auto px-6 pb-3">
+          {formMode === 'manual' ? ManualForm : ResumeForm}
+        </div>
+        
+        {/* Fixed Footer */}
+        <div className="flex-shrink-0 p-3 border-t border-gray-700">
+          <div className="w-full flex flex-col lg:flex-row gap-1 items-center justify-center">
+            <h1 className="self-start text-base font-semibold">Note:</h1>
+            <p className="lg:pl-2 text-sm font-semibold text-gray-300">
               Please fill out each section carefully. Your interview will be
               based on the information you provide.
             </p>

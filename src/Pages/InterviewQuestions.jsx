@@ -137,7 +137,7 @@ const InterviewQuestions = () => {
         </div>
       ) : null}
       
-      <div className="flex-1 w-full max-w-7xl mx-auto flex flex-col md:flex-row items-center md:items-stretch gap-8 z-10 p-8">
+      <div className="flex-1 w-full max-w-7xl mx-auto flex flex-col md:flex-row items-center md:items-stretch gap-8 z-10 p-4 min-h-0">
           {isInterviewing ? InterviewingUI : PreInterviewUI}
       </div>
 

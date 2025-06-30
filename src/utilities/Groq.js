@@ -11,10 +11,69 @@ export const groq = axios.create({
 export const generateInterviewQuestion = async (
   jobDescription,
   previousQuestions = [],
-  questionIndex = 0
+  questionIndex = 0,
+  experience = "Fresher",
+  skills = []
 ) => {
   try {
     const systemPrompt = `You are Nova, a professional and empathetic AI interviewer. Your goal is to assess a candidate's suitability for a role in a realistic, conversational manner. Start with fundamental concepts and progressively move to more advanced topics.`;
+
+    // Experience-based instruction
+    let experienceInstruction = "";
+    switch (experience) {
+      case "Student":
+        experienceInstruction = `The candidate is a university student with minimal or no real-world experience. Keep questions simple, conceptual, and educational. Avoid job-specific or industry-heavy scenarios. Focus on:
+        - Basic theoretical concepts
+        - Simple programming fundamentals
+        - Academic-level understanding
+        - Basic problem-solving approaches
+        - Learning-oriented questions`;
+        break;
+      case "Fresher":
+        experienceInstruction = `The candidate is a fresher who has completed education and some projects. Ask beginner to early-intermediate questions focused on practical understanding, basic problem-solving, and essential tools. Focus on:
+        - Basic practical applications
+        - Simple real-world scenarios
+        - Fundamental tools and technologies
+        - Basic debugging and problem-solving
+        - Entry-level best practices`;
+        break;
+      case "Intermediate":
+        experienceInstruction = `The candidate has 1 to 3 years of industry experience. Ask scenario-based and moderately complex questions involving real-world application, debugging, and common team challenges. Focus on:
+        - Real-world project scenarios
+        - Common industry challenges
+        - Team collaboration situations
+        - Moderate complexity problem-solving
+        - Practical implementation details
+        - Basic optimization and performance considerations`;
+        break;
+      case "Senior":
+        experienceInstruction = `The candidate has 4+ years of experience. Ask advanced, in-depth questions focusing on architectural decisions, optimization, scalability, debugging complex issues, and industry best practices. Focus on:
+        - Complex architectural decisions
+        - Advanced optimization techniques
+        - Scalability and performance considerations
+        - Deep technical troubleshooting
+        - Industry best practices and standards
+        - Leadership and mentoring scenarios
+        - Advanced problem-solving approaches`;
+        break;
+      default:
+        experienceInstruction = `The candidate is a fresher who has completed education and some projects. Ask beginner to early-intermediate questions focused on practical understanding, basic problem-solving, and essential tools.`;
+    }
+
+    // Skills-based instruction
+    let skillsInstruction = "";
+    if (skills && skills.length > 0) {
+      skillsInstruction = `IMPORTANT: Generate a question specifically focused on ONE of these skills: ${skills.join(", ")}. 
+      
+      Choose a skill that:
+      - Hasn't been covered in previous questions (if possible)
+      - Is most relevant to the current question progression level
+      - Aligns with the candidate's experience level
+      
+      The question should directly test knowledge and understanding of the chosen skill.`;
+    } else {
+      skillsInstruction = `Focus on the core technologies and concepts mentioned in the job description.`;
+    }
 
     // Create a progression system based on question index
     let progressionInstruction = "";
@@ -51,14 +110,11 @@ export const generateInterviewQuestion = async (
     Job Description:
     ${jobDescription}
 
-    ${progressionInstruction}
+    ${experienceInstruction}
 
-    IMPORTANT: Focus on the CORE TECHNOLOGIES mentioned in the job description. For example:
-    - If "React" is mentioned, ask about React concepts
-    - If "JavaScript" is mentioned, ask about JavaScript fundamentals
-    - If "Python" is mentioned, ask about Python basics
-    - If "SQL" is mentioned, ask about database concepts
-    - If "HTML/CSS" is mentioned, ask about web fundamentals
+    ${skillsInstruction}
+
+    ${progressionInstruction}
 
     The question should be concise (2-3 lines max), designed to be answered verbally, and should probe for real-world understanding, not just textbook definitions.
 
@@ -91,14 +147,35 @@ export const generateInterviewQuestion = async (
   }
 };
 
-export const analyzeAnswer = async (question, answer, jobDescription) => {
+export const analyzeAnswer = async (question, answer, jobDescription, experience = "Fresher") => {
   try {
     const systemPrompt = `You are an expert interview analyst. Your task is to review an answer and provide concise, constructive feedback and a rating.`;
+
+    // Experience-based feedback instruction
+    let experienceInstruction = "";
+    switch (experience) {
+      case "Student":
+        experienceInstruction = `The candidate is a university student. Provide encouraging feedback that focuses on learning and growth. Be supportive while pointing out areas for improvement. Consider their academic background and limited practical experience.`;
+        break;
+      case "Fresher":
+        experienceInstruction = `The candidate is a fresher with some project experience. Provide balanced feedback that acknowledges their foundational knowledge while suggesting practical improvements. Focus on real-world application and industry practices.`;
+        break;
+      case "Intermediate":
+        experienceInstruction = `The candidate has 1-3 years of experience. Provide professional feedback that evaluates their practical knowledge and problem-solving abilities. Focus on industry standards, best practices, and areas for career growth.`;
+        break;
+      case "Senior":
+        experienceInstruction = `The candidate has 4+ years of experience. Provide expert-level feedback that evaluates their depth of knowledge, leadership potential, and advanced technical skills. Focus on architectural thinking, optimization, and industry best practices.`;
+        break;
+      default:
+        experienceInstruction = `The candidate is a fresher. Provide balanced feedback that acknowledges their foundational knowledge while suggesting practical improvements.`;
+    }
 
     const userPrompt = `Please analyze the following interview response based on the provided job context.
 
     Job Description Context:
     ${jobDescription}
+
+    ${experienceInstruction}
 
     Question Asked: "${question}"
     Candidate's Answer: "${answer}"

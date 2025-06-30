@@ -66,9 +66,12 @@ export default function TagInput() {
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        className="placeholder-black outline-none bg-slate-300 rounded-lg px-3 py-3 text-base font-semibold"
-        placeholder="Type and press Enter or Space to add tags"
+        className="placeholder-gray-500 outline-none bg-slate-300 rounded-lg px-3 py-3 text-base font-semibold"
+        placeholder="Add your skills (e.g., React, JavaScript, Python, SQL) - Press Enter or Space to add"
       />
+      <p className="text-sm text-gray-400 mt-1">
+        💡 Tip: Add specific technologies, frameworks, and tools you know. These will be used to generate targeted interview questions.
+      </p>
     </>
   );
 }
