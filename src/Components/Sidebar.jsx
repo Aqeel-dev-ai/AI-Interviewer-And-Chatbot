@@ -1,4 +1,4 @@
-import { CancelOutlined } from "@mui/icons-material";
+
 import { useEffect, useState } from "react";
 import { useChatBotContext } from "../Context/ChatBotContext";
 import Loader from "./Loader";
@@ -49,7 +49,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, handleSidebarToggle }) => {
   };
 
   useEffect(() => {
+    console.log("Sidebar useEffect - User:", User?.uid);
     if (User?.uid) {
+      console.log("Calling fetchChatSessions from Sidebar");
       fetchChatSessions();
       fetchInterview();
     }
@@ -67,16 +69,6 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen, handleSidebarToggle }) => {
         <div className="sticky top-0 z-10 bg-[#081229] flex flex-col gap-2 px-4 pb-2 border-b border-[#232b47]">
           <div className="flex items-center gap-2">
             <span className="text-lg font-bold text-white tracking-wide truncate">NOVA Chatbot</span>
-            <span className="flex-1" />
-            <CancelOutlined
-              sx={{
-                fontSize: 24,
-                cursor: "pointer",
-                transition: "transform 0.2s ease-in-out",
-                "&:hover": { transform: "scale(1.09)" },
-              }}
-              onClick={() => setSidebarOpen(false)}
-            />
           </div>
           {/* New Chat Button (adjusted size for sidebar width) */}
           <button

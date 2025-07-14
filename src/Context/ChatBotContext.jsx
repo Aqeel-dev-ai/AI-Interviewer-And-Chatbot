@@ -87,6 +87,13 @@ export const ChatBotContextProvider = ({ children }) => {
     getUserName();
   }, []);
 
+  useEffect(() => {
+    if (User?.uid) {
+      console.log("User authenticated, fetching chat sessions");
+      fetchChatSessions();
+    }
+  }, [User?.uid]);
+
   const handleStop = () => {
     setFetchingData(false);
     setStopResponse(true);
@@ -137,8 +144,17 @@ export const ChatBotContextProvider = ({ children }) => {
   };
 
   const saveUserChat = async ({ Prompt, Response }) => {
+    console.log("saveUserChat called with:", { Prompt, Response });
+    console.log("User.uid:", User?.uid, "currentChatId:", currentChatId);
+    
     try {
+      if (!User?.uid) {
+        console.error("No user ID available for saving chat");
+        return;
+      }
+
       if (!currentChatId) {
+        console.log("Creating new chat document");
         const chatDocRef = await addDoc(collection(db, "Chats"), {
           userId: User.uid,
           messages: arrayUnion({
@@ -147,8 +163,10 @@ export const ChatBotContextProvider = ({ children }) => {
           }),
           timestamp: Timestamp.now(),
         });
+        console.log("New chat document created with ID:", chatDocRef.id);
         setCurrentChatId(chatDocRef.id);
       } else if (currentChatId) {
+        console.log("Updating existing chat document:", currentChatId);
         const chatDocRef = doc(db, "Chats", currentChatId);
         await updateDoc(chatDocRef, {
           messages: arrayUnion({
@@ -157,8 +175,10 @@ export const ChatBotContextProvider = ({ children }) => {
           }),
           timestamp: Timestamp.now(),
         });
+        console.log("Chat document updated successfully");
       }
     } catch (error) {
+      console.error("Error saving chat:", error);
       setError(error.code || error.message);
     }
   };
@@ -178,21 +198,52 @@ export const ChatBotContextProvider = ({ children }) => {
   };
 
   const fetchChatSessions = async () => {
+    console.log("fetchChatSessions called, User.uid:", User?.uid);
     fetchHistory(true);
     try {
-      const q = query(
-        collection(db, "Chats"),
-        where("userId", "==", User.uid),
-        orderBy("timestamp", "desc")
-      );
-      const querySnapshot = await getDocs(q);
+      if (!User?.uid) {
+        console.log("No user ID available");
+        setHistory([]);
+        return;
+      }
 
-      const sessions = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setHistory(sessions);
+      // Test Firestore access to see if rules have been updated
+      console.log("Testing Firestore access...");
+      try {
+        const testQuery = query(collection(db, "Chats"));
+        const testSnapshot = await getDocs(testQuery);
+        console.log("✅ Firestore access successful! Total documents:", testSnapshot.docs.length);
+        
+        // Log the first few documents to see their structure
+        testSnapshot.docs.slice(0, 3).forEach((doc, index) => {
+          console.log(`Document ${index + 1}:`, doc.id, doc.data());
+        });
+        
+        // Filter the results in JavaScript instead of Firestore query
+        const userSessions = testSnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(session => session.userId === User.uid)
+          .sort((a, b) => {
+            if (a.timestamp && b.timestamp) {
+              return b.timestamp.toDate() - a.timestamp.toDate();
+            }
+            return 0;
+          });
+        
+        console.log("User sessions found:", userSessions.length);
+        if (userSessions.length > 0) {
+          console.log("First session data:", userSessions[0]);
+        }
+        setHistory(userSessions);
+        
+      } catch (testError) {
+        console.error("❌ Firestore access failed:", testError);
+        console.log("Please update Firestore rules in Firebase Console");
+        setHistory([]);
+      }
+      
     } catch (error) {
+      console.error("Error fetching chat sessions:", error);
       setError(error.code || error.message);
     } finally {
       fetchHistory(false);

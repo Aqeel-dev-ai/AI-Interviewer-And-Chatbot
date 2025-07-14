@@ -109,6 +109,18 @@ export const AuthProvider = ({ children }) => {
       case "auth/network-request-failed":
         setError("Network error. Check connection.");
         break;
+      case "auth/popup-closed-by-user":
+        setError("Sign-in was cancelled");
+        break;
+      case "auth/popup-blocked":
+        setError("Pop-up was blocked. Please allow pop-ups for this site.");
+        break;
+      case "auth/operation-not-allowed":
+        setError("Google sign-in is not enabled. Please contact support.");
+        break;
+      case "permission-denied":
+        setError("Database access denied. Please contact support.");
+        break;
       default:
         setError("Invalid Credentials");
     }
@@ -144,6 +156,11 @@ export const AuthProvider = ({ children }) => {
  
   const signInWithGoogle = async (navigate) => {
     const provider = new GoogleAuthProvider();
+    // Add custom parameters to avoid popup issues
+    provider.setCustomParameters({
+      prompt: 'select_account'
+    });
+    
     setError(null);
     setLoading(true);
   
@@ -151,22 +168,44 @@ export const AuthProvider = ({ children }) => {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
   
-      const userRef = doc(db, "users", user.uid);
-      const userSnap = await getDoc(userRef);
+      try {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
   
-      if (!userSnap.exists()) {
-        await setDoc(userRef, {
-          name: user.displayName,
-          email: user.email,
-          createdAt: serverTimestamp(),
-          UserId: user.uid,
-        });
+        if (!userSnap.exists()) {
+          await setDoc(userRef, {
+            name: user.displayName,
+            email: user.email,
+            createdAt: serverTimestamp(),
+            UserId: user.uid,
+          });
+        }
+  
+        navigate("/app");
+      } catch (firestoreError) {
+        console.error("Firestore error:", firestoreError);
+        setError("Database error. Please try again.");
       }
-  
-      navigate("/app");
     } catch (error) {
-      setError(error.code);
       console.error("Google Sign-in error:", error.code, error.message);
+      
+      // Handle specific error cases
+      switch (error.code) {
+        case "auth/popup-closed-by-user":
+          setError("Sign-in was cancelled");
+          break;
+        case "auth/popup-blocked":
+          setError("Pop-up was blocked. Please allow pop-ups for this site.");
+          break;
+        case "auth/operation-not-allowed":
+          setError("Google sign-in is not enabled. Please contact support.");
+          break;
+        case "auth/network-request-failed":
+          setError("Network error. Please check your connection.");
+          break;
+        default:
+          setError("Sign-in failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

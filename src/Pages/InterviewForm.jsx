@@ -6,28 +6,65 @@ import { useAuth } from "../Context/AuthContext";
 import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
 import { db } from "../utilities/firebase";
 
+
 const InterviewHistorySidebar = ({ onInterviewSelect }) => {
   const { User } = useAuth();
   const [interviews, setInterviews] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!User?.uid) return;
+    console.log('User in sidebar:', User);
+    console.log('User UID:', User?.uid);
+    console.log('User ID:', User?.id);
+    console.log('User email:', User?.email);
+    console.log('User keys:', Object.keys(User || {}));
+    console.log('User toString:', User?.toString());
+    
+    // Check if user is properly loaded
+    if (!User || !User.uid) {
+      console.log('User not loaded or no UID, skipping interview fetch');
+      return;
+    }
     const fetchInterview = async () => {
       setLoading(true);
       try {
+        console.log('Fetching interviews for user:', User.uid);
+        
+        // First, let's try to get all interviews to see if we can access the collection
+        const allInterviewsQuery = query(collection(db, "Interview"));
+        const allInterviewsSnapshot = await getDocs(allInterviewsQuery);
+        console.log('All interviews in collection:', allInterviewsSnapshot.docs.length);
+        
+        // Log all interviews to see their structure
+        allInterviewsSnapshot.docs.forEach((doc, index) => {
+          console.log(`Interview ${index}:`, doc.data());
+        });
+        
+        // Now get user-specific interviews (without orderBy to avoid index requirement)
         const q = query(
           collection(db, "Interview"),
-          where("UserId", "==", User.uid),
-          orderBy("timestamp", "desc")
+          where("UserId", "==", User.uid)
         );
         const querySnapshot = await getDocs(q);
         const interviewsData = querySnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
-        setInterviews(interviewsData);
+        
+        // Sort by timestamp on the client side
+        const sortedInterviews = interviewsData.sort((a, b) => {
+          const timestampA = a.timestamp?.toDate?.() || new Date(0);
+          const timestampB = b.timestamp?.toDate?.() || new Date(0);
+          return timestampB - timestampA; // Descending order (newest first)
+        });
+        
+        console.log('Fetched interviews:', sortedInterviews);
+        console.log('Number of interviews found:', sortedInterviews.length);
+        setInterviews(sortedInterviews);
       } catch (error) {
+        console.error('Error fetching interviews:', error);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
         setInterviews([]);
       } finally {
         setLoading(false);
@@ -41,7 +78,7 @@ const InterviewHistorySidebar = ({ onInterviewSelect }) => {
   };
 
   return (
-    <div className="fixed top-[80px] left-0 h-[calc(100vh-80px)] w-[340px] z-30 bg-[#081229] border-r border-[#232b47] flex flex-col">
+    <div className="fixed top-[80px] left-0 h-[calc(100vh-80px)] w-[340px] z-50 bg-[#081229] border-r border-[#232b47] flex flex-col shadow-lg">
       <div className="p-4 border-b border-[#232b47]">
         <span className="text-white font-semibold text-lg">Interview History</span>
       </div>
@@ -89,6 +126,7 @@ const InterviewForm = () => {
   const [fileName, setFileName] = useState("");
   const [parseError, setParseError] = useState("");
   const [formError, setFormError] = useState("");
+  const [showSidebar, setShowSidebar] = useState(true);
 
   const handleInterviewSelect = (interview) => {
     // Navigate to Result page with interview data
@@ -117,32 +155,115 @@ const InterviewForm = () => {
     setIsParsing(true);
 
     try {
-      const pdfjs = await import("pdfjs-dist");
-      pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@latest/build/pdf.worker.min.mjs`;
+      const pdfjsLib = await import("pdfjs-dist");
+      
+      // For PDF.js v5.x with Vite, try to configure worker properly
+      // If this fails, we'll catch it and fall back to main thread
+      try {
+        const workerSrc = new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url);
+        pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc.href;
+      } catch (workerError) {
+        console.warn('Worker configuration failed, using main thread:', workerError);
+        // Don't set workerSrc, let it use main thread
+      }
 
       const reader = new FileReader();
       reader.onload = async (event) => {
         try {
-          const loadingTask = pdfjs.getDocument({ data: event.target.result });
-          const pdf = await loadingTask.promise;
+          // Add timeout to prevent hanging
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('PDF parsing timeout')), 60000); // 60 second timeout
+          });
+
+          const loadingTask = pdfjsLib.getDocument({ 
+            data: event.target.result,
+            disableFontFace: true,
+            // Try to use worker if available, otherwise fall back to main thread
+            disableWorker: false
+          });
+          
+          console.log("Starting PDF parsing...");
+          const pdf = await Promise.race([loadingTask.promise, timeoutPromise]);
+          console.log(`PDF loaded successfully with ${pdf.numPages} pages`);
+          
           let text = "";
+          
           for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const content = await page.getTextContent();
-            text += content.items.map((item) => item.str).join(" ");
+            try {
+              console.log(`Parsing page ${i}/${pdf.numPages}...`);
+              const page = await pdf.getPage(i);
+              const content = await page.getTextContent();
+              const pageText = content.items.map((item) => item.str).join(" ");
+              text += pageText + " ";
+              console.log(`Page ${i} parsed successfully, length: ${pageText.length}`);
+            } catch (pageError) {
+              console.warn(`Error parsing page ${i}:`, pageError);
+              // Continue with other pages even if one fails
+            }
           }
-          setResumeText(text);
+          
+          console.log(`PDF parsing completed. Total text length: ${text.length}`);
+          if (text.trim()) {
+            setResumeText(text.trim());
+            console.log("Resume text set successfully");
+          } else {
+            setParseError("No text content found in the PDF. The PDF might be image-based or corrupted. Please ensure your PDF contains selectable text.");
+            console.log("No text content found in PDF");
+          }
         } catch (error) {
           console.error("Error parsing PDF content:", error);
-          setParseError("Could not read the content of the PDF.");
+          
+          // Provide more specific error messages
+          let errorMessage = "Could not read the content of the PDF.";
+          
+          if (error.name === "InvalidPDFException") {
+            errorMessage = "The PDF file appears to be corrupted or invalid.";
+          } else if (error.name === "MissingPDFException") {
+            errorMessage = "The PDF file is missing or could not be loaded.";
+          } else if (error.name === "UnexpectedResponseException") {
+            errorMessage = "Network error while loading PDF. Please check your connection.";
+          } else if (error.message && error.message.includes("password")) {
+            errorMessage = "This PDF is password protected. Please remove the password and try again.";
+          } else if (error.message && error.message.includes("timeout")) {
+            errorMessage = "PDF parsing took too long. The file might be too large or complex.";
+          } else if (error.message && error.message.includes("worker")) {
+            errorMessage = "PDF parser worker issue. Please try refreshing the page and uploading again.";
+          } else if (error.message && error.message.includes("GlobalWorkerOptions")) {
+            errorMessage = "PDF parser configuration issue. Please refresh the page and try again.";
+          } else if (error.message && error.message.includes("workerSrc")) {
+            errorMessage = "PDF parser worker configuration issue. Please refresh the page and try again.";
+          } else if (error.message && error.message.includes("fake worker")) {
+            errorMessage = "PDF parsing is running in compatibility mode. Large files may be slower to process.";
+          }
+          
+          setParseError(errorMessage);
         } finally {
           setIsParsing(false);
         }
       };
+      
+      reader.onerror = () => {
+        setParseError("Error reading the file. Please try again.");
+        setIsParsing(false);
+      };
+      
       reader.readAsArrayBuffer(file);
     } catch (error) {
       console.error("Error loading PDF.js:", error);
-      setParseError("An unexpected error occurred while loading the PDF parser.");
+      
+      let errorMessage = "An unexpected error occurred while loading the PDF parser.";
+      
+      if (error.message && error.message.includes("workerSrc")) {
+        errorMessage = "PDF parser worker configuration error. Please refresh the page and try again.";
+      } else if (error.message && error.message.includes("Invalid `workerSrc` type")) {
+        errorMessage = "PDF parser configuration issue. Please refresh the page and try again.";
+      } else if (error.message && error.message.includes("network")) {
+        errorMessage = "Network error while loading PDF parser. Please check your connection.";
+      } else if (error.message && error.message.includes("import")) {
+        errorMessage = "PDF parser module failed to load. Please refresh the page and try again.";
+      }
+      
+      setParseError(errorMessage);
       setIsParsing(false);
     }
   };
@@ -439,6 +560,11 @@ Examples:
         >
           Upload Your Resume (PDF only):
         </label>
+        <p className="text-xs text-gray-400 mb-2">
+          📄 Upload a PDF resume with selectable text. Image-based PDFs won't work. 
+          The parser will extract text content to help generate relevant interview questions.
+          Note: Large PDF files may take longer to process as parsing runs in the main thread.
+        </p>
         <input
           type="file"
           id="resume"
@@ -446,9 +572,25 @@ Examples:
           onChange={handleFileChange}
           className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
         />
-        {isParsing && <p className="text-sm text-yellow-400 mt-2">Parsing your resume, please wait...</p>}
-        {fileName && !isParsing && <p className="text-sm text-green-400 mt-2">Ready to submit: {fileName}</p>}
-        {parseError && <p className="text-sm text-red-500 mt-2">{parseError}</p>}
+        {isParsing && (
+          <div className="text-sm text-yellow-400 mt-2 flex items-center gap-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-400"></div>
+            Parsing your resume, please wait...
+          </div>
+        )}
+        {fileName && !isParsing && !parseError && (
+          <p className="text-sm text-green-400 mt-2">✅ Ready to submit: {fileName}</p>
+        )}
+        {parseError && (
+          <div className="text-sm text-red-500 mt-2 p-2 bg-red-900/20 rounded border border-red-700">
+            <p className="font-semibold">Error parsing PDF:</p>
+            <p>{parseError}</p>
+            <p className="text-xs mt-1 text-gray-300">
+              💡 Tip: Make sure your PDF contains selectable text (not just images). 
+              Try copying text from your PDF to verify it's text-based.
+            </p>
+          </div>
+        )}
       </div>
        <div className="mt-3 w-full flex items-center justify-center flex-col">
         {formError && (
@@ -470,14 +612,26 @@ Examples:
   return (
     <div className="w-full flex items-start justify-center px-2" style={{ height: 'calc(100vh - 80px)', minHeight: 'calc(100vh - 80px)' }}>
       {/* Interview History Sidebar */}
-      <InterviewHistorySidebar onInterviewSelect={handleInterviewSelect} />
-      {/* Main Content with left margin for sidebar */}
-      <div className="w-full max-w-[900px] bg-[#040E1A] rounded-xl shadow-lg shadow-blue-300 flex flex-col h-full" style={{ marginLeft: '340px' }}>
+      {showSidebar && <InterviewHistorySidebar onInterviewSelect={handleInterviewSelect} />}
+      {/* Main Content with conditional left margin for sidebar */}
+      <div 
+        className="w-full max-w-[900px] bg-[#040E1A] rounded-xl shadow-lg shadow-blue-300 flex flex-col h-full" 
+        style={{ marginLeft: showSidebar ? '340px' : '0' }}
+      >
         {/* Fixed Header */}
         <div className="flex-shrink-0 p-2">
-          <h1 className="text-center text-2xl font-bold mb-2">
-            Tell Us About Your Job Focus
-          </h1>
+          <div className="flex justify-between items-center mb-2">
+            <button
+              onClick={() => setShowSidebar(!showSidebar)}
+              className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            >
+              {showSidebar ? 'Hide' : 'Show'} History
+            </button>
+            <h1 className="text-center text-2xl font-bold">
+              Tell Us About Your Job Focus
+            </h1>
+            <div className="w-20"></div> {/* Spacer for centering */}
+          </div>
           <div className="flex justify-center items-center p-1 bg-gray-800/50 rounded-lg mb-2">
             <button
               onClick={() => setFormMode("manual")}
