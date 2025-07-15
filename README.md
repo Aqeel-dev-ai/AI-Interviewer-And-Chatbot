@@ -135,4 +135,4 @@ Contributions are welcome! Please follow these steps:
 For questions or feedback, please reach out:
 
 **Muhammad Aqeel**
-Email: [hafizm.furqan456@gmail.com](mailto:aqeel032035@gmail.com)
+Email: [aqeel032035@gmail.com](mailto:aqeel032035@gmail.com)
