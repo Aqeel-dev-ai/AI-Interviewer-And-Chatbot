@@ -7,7 +7,7 @@
 
 ## 🚀 Live Demo
 
-Experience the application live: [https://furqan-ai-interviewer-chatbot.netlify.app](https://furqan-ai-interviewer-chatbot.netlify.app)
+Experience the application live: [https://furqan-ai-interviewer-chatbot.netlify.app](https://nova-interviewer-and-chatbot.netlify.app)
 
 ## ✨ Features
 
