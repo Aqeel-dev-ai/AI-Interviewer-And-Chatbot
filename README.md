@@ -134,6 +134,5 @@ Contributions are welcome! Please follow these steps:
 
 For questions or feedback, please reach out:
 
-**Hafiz Muhammad Furqan**
-Email: [hafizm.furqan456@gmail.com](mailto:hafizm.furqan456@gmail.com)
-Project Link: [https://github.com/Hafiz-Muhammad-Furqan/Ai-Interviewer-and-ChatBot](https://github.com/Hafiz-Muhammad-Furqan/Ai-Interviewer-and-ChatBot)
+**Muhammad Aqeel**
+Email: [hafizm.furqan456@gmail.com](mailto:aqeel032035@gmail.com)
